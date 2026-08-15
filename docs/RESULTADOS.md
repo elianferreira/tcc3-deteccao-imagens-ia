@@ -376,6 +376,67 @@ que produziria figuras sem sentido apresentadas como resultado.
 
 ---
 
+## 4.7 T04 — replicação parcial do classificador objeto-sombra
+
+`scripts/replicar_t04_object_shadow.py` · corpus Kandinsky Outdoor dos autores.
+
+**Não comparável** com T01, T02, T03 e T05: corpus diferente, não entra na
+tabela principal nem na fusão. Ver seção 5 de `DECISOES_METODOLOGICAS.md`.
+
+| Subconjunto | n | AUC | Acurácia |
+|---|---|---|---|
+| easy | 187.538 | 0,8293 | 0,7521 |
+| unconfident | 1.410 | 0,7486 | 0,7099 |
+| misclassified | 1.052 | 0,7341 | 0,6939 |
+| prequalificado (união) | 2.462 | 0,7417 | 0,7031 |
+
+### Máscaras vazias: ruído, não atalho
+
+Durante a verificação notou-se que parte das máscaras publicadas está
+**inteiramente zerada** — o SSISv2 não detectou nenhum par objeto-sombra. E a
+taxa difere entre as classes:
+
+| Classe | Máscaras vazias |
+|---|---|
+| Sintéticas | 34,0% |
+| Reais | 44,7% |
+| **Diferença** | **10,7 p.p.** |
+
+Uma diferença sistemática entre classes levanta suspeita imediata de atalho: o
+classificador poderia aprender "máscara vazia → real" e acertar sem analisar
+geometria — exatamente o tipo de viés detectado na resolução e no formato do
+corpus principal.
+
+**Não é o caso.** Recalculando a AUC por grupo:
+
+| Recorte | n | AUC |
+|---|---|---|
+| Todas as imagens | 2.462 | 0,7417 |
+| **Apenas máscaras com conteúdo** | 1.471 | **0,8216** |
+| Apenas máscaras vazias | 991 | 0,4946 |
+
+Nas máscaras vazias a AUC é 0,4946 — o acaso, como tem de ser: a entrada é
+identicamente nula e o classificador não tem o que distinguir. Elas não
+carregam atalho; carregam ruído, e **rebaixam** a AUC agregada em 8 pontos.
+
+O desempenho real do classificador sobre geometria é **0,8216**, medido nas
+imagens em que o extrator efetivamente produziu representação.
+
+### Comparação com o valor publicado (Etapa 3)
+
+A Etapa 3 exige comparar com o artigo, tolerância de 5 p.p. Sarkar et al. (2024)
+reportam, para os subconjuntos difíceis, AUC da ordem de **0,80 a 0,82**.
+
+Medido: **0,8216** sobre máscaras com conteúdo — dentro da tolerância, o que
+sustenta que a replicação é fiel.
+
+**Ressalva honesta:** não foi possível extrair o valor exato do artigo em forma
+tabular; os números acima vêm da Figura 2 e do texto, e a leitura de figura não
+é base segura para um critério de 5 p.p. A conferência definitiva contra a
+tabela do artigo permanece pendente e deve ser feita na redação do Capítulo 4.
+
+---
+
 ## 5. Protocolo de robustez
 
 1.000 imagens in-distribution sob nove degradações.

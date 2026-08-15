@@ -1,0 +1,12 @@
+{
+  "categoria": "outdoor",
+  "n_total": 2462,
+  "vazias_sinteticas": 0.33988212180746563,
+  "vazias_reais": 0.4466759002770083,
+  "diferenca_entre_classes": 0.10679377846954269,
+  "auc_todas": 0.7416625396600798,
+  "auc_com_conteudo": 0.8216353030573931,
+  "n_com_conteudo": 1471,
+  "queda": -0.0799727633973133,
+  "auc_apenas_vazias": 0.49459604785589456
+}
