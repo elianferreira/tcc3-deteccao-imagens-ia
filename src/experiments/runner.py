@@ -26,7 +26,7 @@ from typing import Sequence
 
 import numpy as np
 
-from ..config import RESULTS_DIR, TECHNIQUE_NAMES, TRAINING_SEEDS
+from ..config import RESULTS_DIR, TECHNIQUE_NAMES, TRAINING_SEEDS, WEIGHTS_DIR
 from ..data.manifest import as_arrays, ManifestEntry, read_manifest
 from ..data.perturbations import Perturbation, iter_perturbations, materialize
 from ..metrics import compute_metrics, metrics_per_generator
@@ -314,6 +314,12 @@ class ExperimentRunner:
         O treinamento de T01 e executado com tres inicializacoes aleatorias
         distintas (sementes 42, 123 e 456) e os resultados sao reportados como
         media e desvio padrao.
+
+        Cada semente e persistida assim que termina, em
+        ``results/multiseed/<tecnica>_seed<N>.json`` e no checkpoint
+        correspondente. Uma execucao interrompida retoma de onde parou em vez de
+        recomecar: com tres treinamentos de horas cada, perder tudo por uma
+        interrupcao no meio custa mais que o espaco dos arquivos parciais.
         """
         technique = self.techniques.get(technique_id)
         if technique is None or not technique.trainable:
@@ -323,8 +329,28 @@ class ExperimentRunner:
         val_paths, val_y, _ = self._load_split("val")
         test_paths, test_y, test_generators = self._load_split("test")
 
+        destino = RESULTS_DIR / "multiseed"
+        destino.mkdir(parents=True, exist_ok=True)
+
         results = []
         for seed in seeds:
+            parcial = destino / f"{technique_id}_seed{seed}.json"
+            vetor = destino / f"{technique_id}_seed{seed}_probabilidades.npy"
+
+            if parcial.exists() and vetor.exists():
+                dados = json.loads(parcial.read_text(encoding="utf-8"))
+                print(f"[multi-seed] semente {seed}: reaproveitada de {parcial.name} "
+                      f"(AUC={dados['metrics']['auc']:.4f})", flush=True)
+                results.append(ProtocolResult(
+                    protocol="standard_multiseed", technique_id=technique_id,
+                    condition="clean", seed=seed,
+                    metrics=dados["metrics"], per_generator=dados["per_generator"],
+                    probabilities=np.load(vetor),
+                ))
+                continue
+
+            print(f"[multi-seed] semente {seed}: treinando ...", flush=True)
+            inicio = time.perf_counter()
             set_deterministic(seed)
             technique.seed = seed
             if technique_id == "T01":
@@ -333,13 +359,32 @@ class ExperimentRunner:
                 technique.fit(train_paths, train_y)
 
             probabilities = technique.run(test_paths).probabilities
+            metrics = compute_metrics(test_y, probabilities)
+            per_generator = metrics_per_generator(test_y, probabilities, test_generators)
+
+            # Persiste antes de seguir para a proxima semente.
+            np.save(vetor, probabilities)
+            parcial.write_text(json.dumps(
+                {"seed": seed, "metrics": metrics, "per_generator": per_generator,
+                 "minutos": (time.perf_counter() - inicio) / 60},
+                indent=2, ensure_ascii=False), encoding="utf-8")
+            # O modelo de cada semente tambem e preservado: sem isso, so o da
+            # ultima sobreviveria e as demais seriam irreproduziveis.
+            try:
+                technique.save(WEIGHTS_DIR / f"{technique_id.lower()}_seed{seed}.pt")
+            except Exception as erro:                       # noqa: BLE001
+                print(f"[multi-seed] aviso: falha ao gravar modelo da semente {seed}: {erro}")
+
+            print(f"[multi-seed] semente {seed}: AUC={metrics['auc']:.4f} "
+                  f"em {(time.perf_counter() - inicio) / 60:.1f} min", flush=True)
+
             results.append(ProtocolResult(
                 protocol="standard_multiseed", technique_id=technique_id,
                 condition="clean", seed=seed,
-                metrics=compute_metrics(test_y, probabilities),
-                per_generator=metrics_per_generator(test_y, probabilities, test_generators),
+                metrics=metrics, per_generator=per_generator,
                 probabilities=probabilities,
             ))
+
         self.results.extend(results)
         return results
 
