@@ -1,0 +1,47 @@
+# Corpus e downloads --------------------------------------------------------
+# O dataset de Corvi et al. (2024) e o benchmark sao publicos e reproduzíveis
+# por scripts/download_dataset.py; versiona-los aqui seria inviavel (dezenas de
+# gigabytes) e desnecessario.
+data/
+
+# Repositorios oficiais de terceiros ----------------------------------------
+# Clonados por scripts/setup_external.py, com licencas proprias.
+external/
+
+# Ambiente virtual ----------------------------------------------------------
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Pesos ---------------------------------------------------------------------
+# A Etapa 7 do TCC 2 preve versionar "os pesos dos modelos treinados
+# localmente" -- T01, T03 e T05, todos abaixo de 30 MB. Os pesos de TERCEIROS
+# ficam de fora: sao redistribuicao de artefatos oficiais, e spai.pth tem
+# 891 MB, muito acima do limite de 100 MB por arquivo do GitHub.
+weights/spai.pth
+weights/mfm_pretrain_vit_base.pth
+weights/projective_geometry/
+weights/backup_22k_confundido/
+
+# t03_benford.pkl fica de fora por tamanho, nao por escolha: o Random Forest
+# ajustado sobre ~60.000 amostras ocupa 337 MB, acima do limite de 100 MB por
+# arquivo do GitHub. E integralmente regeneravel:
+#   python scripts/run_experiments.py --protocol standard --fit --techniques T03
+# A limitacao esta declarada no README.
+weights/t03_benford.pkl
+
+# Resultados pesados --------------------------------------------------------
+# Metricas em CSV/JSON e figuras sao versionadas; vetores de escores brutos
+# (~70 KB cada, dezenas de arquivos) sao regeneraveis pela campanha.
+results/scores/
+results/probabilidades/
+results/logs_t02/
+
+# Execucao ------------------------------------------------------------------
+logs/
+*.pid
+
+# Sistema -------------------------------------------------------------------
+.DS_Store
+Thumbs.db

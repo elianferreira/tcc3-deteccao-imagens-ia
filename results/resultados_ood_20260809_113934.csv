@@ -1,0 +1,4 @@
+protocol,technique,technique_name,condition,seed,status,accuracy,auc,error,f1,fn,fnr,fp,fpr,ms_per_image,n_samples,precision,recall,tn,tp
+ood,T01,"Coocorrencia RGB + CNN (Nataraj et al., 2019)",clean,,ok,0.6060606060606061,1.0,,0.7547169811320755,0.0,0.0,39.0,1.0,36.72190909091656,99.0,0.6060606060606061,1.0,0.0,60.0
+ood,T03,"Lei de Benford sobre DCT (Bonettini et al., 2020)",clean,,ok,0.9393939393939394,0.992948717948718,,0.9482758620689655,5.0,0.08333333333333333,1.0,0.02564102564102564,34.9636020202359,99.0,0.9821428571428571,0.9166666666666666,38.0,55.0
+ood,T05,Arquitetura hibrida (proposta),clean,,ok,1.0,1.0,,1.0,0.0,0.0,0.0,0.0,0.002307070635560185,99.0,1.0,1.0,39.0,60.0

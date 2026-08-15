@@ -1,0 +1,186 @@
+{
+  "timestamp": "20260809_113452",
+  "n_results": 30,
+  "failures": [
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "clean",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "clean",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "clean",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "jpeg_q50",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "jpeg_q50",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "jpeg_q50",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "jpeg_q70",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "jpeg_q70",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "jpeg_q70",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "jpeg_q85",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "jpeg_q85",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "jpeg_q85",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "noise_sigma1",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "noise_sigma1",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "noise_sigma1",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "noise_sigma3",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "noise_sigma3",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "noise_sigma3",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "noise_sigma5",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "noise_sigma5",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "noise_sigma5",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "resize_50",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "resize_50",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "resize_50",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "resize_70",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "resize_70",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "resize_70",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T01",
+      "condition": "resize_85",
+      "error": "T01: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T03",
+      "condition": "resize_85",
+      "error": "T03: fit() deve ser chamado antes de predict_proba()"
+    },
+    {
+      "protocol": "robustness",
+      "technique": "T05",
+      "condition": "resize_85",
+      "error": "T05: fit() deve ser chamado antes de predict_proba()"
+    }
+  ]
+}

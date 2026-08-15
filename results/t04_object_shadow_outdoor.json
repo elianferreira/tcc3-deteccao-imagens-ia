@@ -1,0 +1,75 @@
+{
+  "categoria": "outdoor",
+  "corpus": "Kandinsky_Outdoor (Sarkar et al., 2024)",
+  "pesos": "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\weights\\projective_geometry\\object_shadow\\ShadowObject_outdoor.pth",
+  "subconjuntos": {
+    "easy": {
+      "n": 187538,
+      "n_gen": 93982,
+      "n_real": 93556,
+      "auc": 0.8293011249979425,
+      "acuracia": 0.7520715801597543,
+      "matriz_confusao": [
+        [
+          82394,
+          11162
+        ],
+        [
+          35334,
+          58648
+        ]
+      ]
+    },
+    "unconfident": {
+      "n": 1410,
+      "n_gen": 575,
+      "n_real": 835,
+      "auc": 0.7485571465764125,
+      "acuracia": 0.7099290780141844,
+      "matriz_confusao": [
+        [
+          699,
+          136
+        ],
+        [
+          273,
+          302
+        ]
+      ]
+    },
+    "misclassified": {
+      "n": 1052,
+      "n_gen": 443,
+      "n_real": 609,
+      "auc": 0.7340865201066025,
+      "acuracia": 0.6939163498098859,
+      "matriz_confusao": [
+        [
+          522,
+          87
+        ],
+        [
+          235,
+          208
+        ]
+      ]
+    },
+    "prequalificado": {
+      "n": 2462,
+      "n_gen": 1018,
+      "n_real": 1444,
+      "auc": 0.7416625396600798,
+      "acuracia": 0.7030869212022746,
+      "matriz_confusao": [
+        [
+          1221,
+          223
+        ],
+        [
+          508,
+          510
+        ]
+      ]
+    }
+  }
+}

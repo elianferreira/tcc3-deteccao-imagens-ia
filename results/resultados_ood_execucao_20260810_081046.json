@@ -1,0 +1,12 @@
+{
+  "timestamp": "20260810_081046",
+  "n_results": 4,
+  "failures": [
+    {
+      "protocol": "ood",
+      "technique": "T02",
+      "condition": "clean",
+      "error": "T02: pipeline oficial falhou\n recall is undefined. Setting recall to one for all thresholds.\n  warnings.warn(*args, **kwargs)\nINFO:__main__:Test: [0/13388] | Time 22.571 (22.571) | Loss 0.0000 (0.0000) | Mem 956MB\nINFO:__main__:Test: [100/13388] | Time 0.105 (0.338) | Loss 0.0000 (0.1898) | Mem 956MB\nINFO:__main__:Test: [200/13388] | Time 0.132 (0.230) | Loss 0.0000 (0.1628) | Mem 956MB\nINFO:__main__:Test: [300/13388] | Time 0.111 (0.194) | Loss 0.0000 (0.1125) | Mem 956MB\nINFO:__main__:Test: [400/13388] | Time 0.135 (0.177) | Loss 0.1459 (0.1462) | Mem 956MB\nINFO:__main__:Test: [500/13388] | Time 0.145 (0.168) | Loss 0.0000 (0.1430) | Mem 956MB\nINFO:__main__:Test: [600/13388] | Time 0.128 (0.164) | Loss 0.0000 (0.1262) | Mem 956MB\nINFO:__main__:Test: [700/13388] | Time 0.127 (0.161) | Loss 0.0000 (0.1118) | Mem 956MB"
+    }
+  ]
+}

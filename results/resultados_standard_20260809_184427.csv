@@ -1,0 +1,2 @@
+protocol,technique,technique_name,condition,seed,status,accuracy,auc,error,f1,fn,fnr,fp,fpr,ms_per_image,n_samples,precision,recall,tn,tp
+standard,T01,"Coocorrencia RGB + CNN (Nataraj et al., 2019)",clean,,ok,0.998,0.9999502222222223,,0.998003992015968,0.0,0.0,3.0,0.004,9.598659266669225,1500.0,0.9960159362549801,1.0,747.0,750.0

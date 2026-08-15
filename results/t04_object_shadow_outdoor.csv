@@ -1,0 +1,5 @@
+tecnica,componente,categoria,subconjunto,n,auc,acuracia
+T04,object_shadow,outdoor,easy,187538,0.8293011249979425,0.7520715801597543
+T04,object_shadow,outdoor,unconfident,1410,0.7485571465764125,0.7099290780141844
+T04,object_shadow,outdoor,misclassified,1052,0.7340865201066025,0.6939163498098859
+T04,object_shadow,outdoor,prequalificado,2462,0.7416625396600798,0.7030869212022746
