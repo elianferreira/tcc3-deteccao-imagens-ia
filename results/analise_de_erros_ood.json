@@ -1,0 +1,490 @@
+{
+  "protocolo": "ood",
+  "limiar": 0.5,
+  "n_teste": 14788,
+  "tecnicas": [
+    "T01",
+    "T02",
+    "T03",
+    "T05"
+  ],
+  "todas_erram_por_gerador": [
+    {
+      "gerador": "stable_diffusion_3",
+      "n": 1000,
+      "todas_erram": 660,
+      "taxa": 0.66
+    },
+    {
+      "gerador": "dalle3",
+      "n": 1000,
+      "todas_erram": 585,
+      "taxa": 0.585
+    },
+    {
+      "gerador": "adobe_firefly",
+      "n": 1000,
+      "todas_erram": 334,
+      "taxa": 0.334
+    },
+    {
+      "gerador": "midjourney_v6_1",
+      "n": 638,
+      "todas_erram": 153,
+      "taxa": 0.23981191222570533
+    },
+    {
+      "gerador": "gigagan",
+      "n": 1000,
+      "todas_erram": 237,
+      "taxa": 0.237
+    },
+    {
+      "gerador": "midjourney_v5",
+      "n": 1000,
+      "todas_erram": 212,
+      "taxa": 0.212
+    },
+    {
+      "gerador": "flux",
+      "n": 1000,
+      "todas_erram": 191,
+      "taxa": 0.191
+    },
+    {
+      "gerador": "dalle2",
+      "n": 1000,
+      "todas_erram": 163,
+      "taxa": 0.163
+    },
+    {
+      "gerador": "stable_diffusion_xl",
+      "n": 1000,
+      "todas_erram": 153,
+      "taxa": 0.153
+    },
+    {
+      "gerador": "stable_diffusion_2",
+      "n": 1000,
+      "todas_erram": 129,
+      "taxa": 0.129
+    },
+    {
+      "gerador": "stable_diffusion_1_4",
+      "n": 1000,
+      "todas_erram": 89,
+      "taxa": 0.089
+    },
+    {
+      "gerador": "stable_diffusion_1_3",
+      "n": 1000,
+      "todas_erram": 86,
+      "taxa": 0.086
+    },
+    {
+      "gerador": "real",
+      "n": 3150,
+      "todas_erram": 1,
+      "taxa": 0.00031746031746031746
+    }
+  ],
+  "discordancia": {
+    "T01_T02": 0.37990262374898565,
+    "T01_T03": 0.38754395455774954,
+    "T02_T03": 0.43406816337571
+  },
+  "distribuicao_de_acertos": {
+    "0": 2993,
+    "1": 4917,
+    "2": 3967,
+    "3": 2911
+  },
+  "resgate_pela_fusao": {
+    "T01": {
+      "erros_da_tecnica": 6881,
+      "recuperados_por_T05": 1351,
+      "taxa": 0.1963377416073245
+    },
+    "T02": {
+      "erros_da_tecnica": 8153,
+      "recuperados_por_T05": 3157,
+      "taxa": 0.3872194284312523
+    },
+    "T03": {
+      "erros_da_tecnica": 7746,
+      "recuperados_por_T05": 3647,
+      "taxa": 0.4708236509166021
+    },
+    "estragados_pela_fusao": 102
+  },
+  "inversoes": [
+    {
+      "tecnica": "T01",
+      "gerador": "stable_diffusion_3",
+      "auc": 0.3497523809523809,
+      "recall": 0.028,
+      "n": 1000
+    }
+  ],
+  "auc_por_gerador": [
+    {
+      "tecnica": "T01",
+      "gerador": "adobe_firefly",
+      "auc": 0.8435534920634921,
+      "recall": 0.404,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "dalle2",
+      "auc": 0.9231403174603174,
+      "recall": 0.663,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "dalle3",
+      "auc": 0.562718253968254,
+      "recall": 0.06,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "flux",
+      "auc": 0.9102873015873016,
+      "recall": 0.605,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "gigagan",
+      "auc": 0.8725638095238096,
+      "recall": 0.541,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "midjourney_v5",
+      "auc": 0.9354690476190474,
+      "recall": 0.637,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "midjourney_v6_1",
+      "auc": 0.839577797681246,
+      "recall": 0.5062695924764891,
+      "n": 638
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "stable_diffusion_1_3",
+      "auc": 0.8593441269841269,
+      "recall": 0.326,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "stable_diffusion_1_4",
+      "auc": 0.8575201587301586,
+      "recall": 0.323,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "stable_diffusion_2",
+      "auc": 0.9052204761904762,
+      "recall": 0.4,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "stable_diffusion_3",
+      "auc": 0.3497523809523809,
+      "recall": 0.028,
+      "n": 1000
+    },
+    {
+      "tecnica": "T01",
+      "gerador": "stable_diffusion_xl",
+      "auc": 0.936451746031746,
+      "recall": 0.528,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "adobe_firefly",
+      "auc": 0.7708119047619048,
+      "recall": 0.273,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "dalle2",
+      "auc": 0.6950195238095237,
+      "recall": 0.187,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "dalle3",
+      "auc": 0.654508253968254,
+      "recall": 0.159,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "flux",
+      "auc": 0.5636469841269841,
+      "recall": 0.095,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "gigagan",
+      "auc": 0.6889073015873016,
+      "recall": 0.15,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "midjourney_v5",
+      "auc": 0.7000312698412698,
+      "recall": 0.203,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "midjourney_v6_1",
+      "auc": 0.6260098522167488,
+      "recall": 0.13636363636363635,
+      "n": 638
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "stable_diffusion_1_3",
+      "auc": 0.961748253968254,
+      "recall": 0.825,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "stable_diffusion_1_4",
+      "auc": 0.962558253968254,
+      "recall": 0.819,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "stable_diffusion_2",
+      "auc": 0.7158211111111111,
+      "recall": 0.265,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "stable_diffusion_3",
+      "auc": 0.6079544444444445,
+      "recall": 0.095,
+      "n": 1000
+    },
+    {
+      "tecnica": "T02",
+      "gerador": "stable_diffusion_xl",
+      "auc": 0.8513015873015873,
+      "recall": 0.493,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "adobe_firefly",
+      "auc": 0.5487077777777778,
+      "recall": 0.274,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "dalle2",
+      "auc": 0.6518874603174605,
+      "recall": 0.435,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "dalle3",
+      "auc": 0.5546309523809523,
+      "recall": 0.277,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "flux",
+      "auc": 0.7558447619047619,
+      "recall": 0.627,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "gigagan",
+      "auc": 0.6584225396825398,
+      "recall": 0.495,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "midjourney_v5",
+      "auc": 0.6105792063492064,
+      "recall": 0.363,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "midjourney_v6_1",
+      "auc": 0.6585724237448374,
+      "recall": 0.47962382445141066,
+      "n": 638
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "stable_diffusion_1_3",
+      "auc": 0.5418550793650795,
+      "recall": 0.257,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "stable_diffusion_1_4",
+      "auc": 0.5392409523809525,
+      "recall": 0.227,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "stable_diffusion_2",
+      "auc": 0.8016811111111112,
+      "recall": 0.7,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "stable_diffusion_3",
+      "auc": 0.5451433333333332,
+      "recall": 0.288,
+      "n": 1000
+    },
+    {
+      "tecnica": "T03",
+      "gerador": "stable_diffusion_xl",
+      "auc": 0.6464322222222222,
+      "recall": 0.431,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "adobe_firefly",
+      "auc": 0.7778768253968255,
+      "recall": 0.446,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "dalle2",
+      "auc": 0.8903377777777778,
+      "recall": 0.679,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "dalle3",
+      "auc": 0.6142052380952381,
+      "recall": 0.128,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "flux",
+      "auc": 0.8678704761904763,
+      "recall": 0.602,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "gigagan",
+      "auc": 0.8300449206349207,
+      "recall": 0.537,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "midjourney_v5",
+      "auc": 0.8664853968253968,
+      "recall": 0.64,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "midjourney_v6_1",
+      "auc": 0.8249106831865453,
+      "recall": 0.493730407523511,
+      "n": 638
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "stable_diffusion_1_3",
+      "auc": 0.9268622222222224,
+      "recall": 0.646,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "stable_diffusion_1_4",
+      "auc": 0.9308349206349206,
+      "recall": 0.652,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "stable_diffusion_2",
+      "auc": 0.8914384126984127,
+      "recall": 0.508,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "stable_diffusion_3",
+      "auc": 0.5489328571428571,
+      "recall": 0.084,
+      "n": 1000
+    },
+    {
+      "tecnica": "T05",
+      "gerador": "stable_diffusion_xl",
+      "auc": 0.9050438095238095,
+      "recall": 0.669,
+      "n": 1000
+    }
+  ],
+  "exemplos": {
+    "todas_erram": [
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\real\\coco\\coco_013898.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00000.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00001.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00003.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00004.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00010.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00013.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00017.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00018.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00019.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00022.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00023.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00030.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00031.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\adobe_firefly\\adobe_firefly_00032.png"
+    ],
+    "so_a_fusao_acerta": [
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\dalle2\\dalle2_00551.png",
+      "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\corvi2024_30k_norm\\fake\\stable_diffusion_xl\\stable_diffusion_xl_00522.png"
+    ]
+  }
+}

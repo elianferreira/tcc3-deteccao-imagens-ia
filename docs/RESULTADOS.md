@@ -229,6 +229,153 @@ diferença alguma entre A e B.
 
 ---
 
+## 4.5 Análise de erros (Etapa 5)
+
+`scripts/analise_de_erros.py` · `results/analise_de_erros_ood.json`
+
+### Imagens que todas as três técnicas isoladas erram
+
+**2.993 de 14.788 (20,2%)**, com concentração muito desigual:
+
+| Gerador | n | Todas erram | Taxa |
+|---|---|---|---|
+| stable_diffusion_3 | 1.000 | 660 | **66,0%** |
+| dalle3 | 1.000 | 585 | **58,5%** |
+| adobe_firefly | 1.000 | 334 | 33,4% |
+| midjourney_v6_1 | 638 | 153 | 24,0% |
+| gigagan | 1.000 | 237 | 23,7% |
+| stable_diffusion_1_3 | 1.000 | 86 | 8,6% |
+| **real** | 3.150 | **1** | **0,0%** |
+
+Dois terços das imagens do Stable Diffusion 3 escapam de **todas** as
+evidências simultaneamente — coocorrência de pixels, espectro e estatística
+DCT. Não é uma técnica falhando: é um gerador que não deixa nenhum dos três
+rastros procurados.
+
+O contraste com a linha `real` (1 erro em 3.150) mostra que o problema é
+inteiramente de falso negativo. O conjunto de técnicas quase nunca acusa uma
+imagem real; ele simplesmente não enxerga as sintéticas recentes.
+
+### Discordância — a premissa da fusão se confirma
+
+| Par | Discordância |
+|---|---|
+| T01 × T02 | 38,0% |
+| T01 × T03 | 38,8% |
+| T02 × T03 | 43,4% |
+
+| Técnicas que acertam | Imagens | % |
+|---|---|---|
+| 0 de 3 | 2.993 | 20,2% |
+| 1 de 3 | 4.917 | 33,2% |
+| 2 de 3 | 3.967 | 26,8% |
+| 3 de 3 | 2.911 | 19,7% |
+
+Em **60%** das imagens as técnicas divergem (1 ou 2 acertos de 3). Isso valida
+empiricamente a premissa da arquitetura híbrida: as evidências são de fato
+complementares, e não redundantes. Se fossem redundantes, a distribuição se
+concentraria em 0 e 3.
+
+### A fusão aproveita a complementaridade
+
+| Entre os erros de | T05 acerta | Taxa |
+|---|---|---|
+| T01 (6.881 erros) | 1.351 | 19,6% |
+| T02 (8.153 erros) | 3.157 | 38,7% |
+| T03 (7.746 erros) | 3.647 | 47,1% |
+
+E o custo é pequeno: em apenas **102 imagens (0,7%)** a maioria acerta e T05
+erra. A fusão recupera muito mais do que estraga — este é o argumento
+quantitativo mais direto a favor de T05, e independe da discussão de AUC da
+seção 3.2.
+
+### Inversão — apenas um caso, e ele é real
+
+| Técnica | Gerador | AUC | Recall |
+|---|---|---|---|
+| T01 | stable_diffusion_3 | **0,3498** | 2,8% |
+
+**Correção metodológica importante.** Uma primeira versão desta análise mediu
+inversão pela taxa de acerto dentro de cada gerador e apontou 28 casos. A
+medida estava errada: cada subconjunto de gerador contém **apenas imagens
+sintéticas**, de modo que a taxa de acerto ali é o recall. Um limiar
+conservador produz recall baixo em quase todo gerador sem que exista inversão
+alguma — o classificador apenas exige mais evidência para acusar.
+
+Inversão é outra coisa: o classificador ordenar as sintéticas de um gerador
+como **mais reais que as próprias imagens reais**. Isso só aparece comparando
+cada gerador contra o conjunto real, por AUC < 0,50.
+
+Medido corretamente, há **um único caso** em todo o experimento: T01 no Stable
+Diffusion 3. Os outros **29 casos** de recall abaixo de 50% são limiar
+conservador, não falha de ordenação.
+
+A distinção importa para o Capítulo 4: afirmar 28 inversões seria um erro
+grosseiro de interpretação. Uma inversão isolada e severa (AUC 0,350) é um
+achado bem mais específico e defensável.
+
+---
+
+## 4.6 Grad-CAM de T01 (Etapa 5)
+
+`scripts/gradcam_t01.py` · figuras em `results/figuras/gradcam/`
+
+### O que o mapa mostra — e o que não mostra
+
+T01 **não recebe a imagem**: recebe as matrizes de coocorrência dos canais R, G
+e B. Nessa representação, a posição `(i, j)` acumula quantas vezes um pixel de
+intensidade `i` aparece adjacente a um pixel de intensidade `j`. **Os dois eixos
+são níveis de intensidade, de 0 a 255 — não são coordenadas espaciais.**
+
+Portanto o Grad-CAM de T01 responde *"quais transições de intensidade pesaram na
+decisão"*, e não *"que região da imagem parece sintética"*. Sobrepor este mapa à
+fotografia seria leitura incorreta: não existe correspondência posicional entre
+os dois. Isso precisa constar da legenda da figura no Capítulo 4, porque
+contraria a intuição usual de Grad-CAM sobre classificadores de pixels.
+
+Camada alvo: `features[13]`, saída da última convolução (128 canais) após ReLU,
+resolução 64 × 64 no espaço de coocorrência.
+
+### Escores por gerador (uma imagem de cada)
+
+| Gerador | P(sintética) |
+|---|---|
+| latent_diffusion (treino) | 100,0% |
+| glide | 100,0% |
+| dalle3 | 99,5% |
+| stable_diffusion_2 | 92,7% |
+| gigagan | 91,4% |
+| midjourney_v5 | 72,5% |
+| flux | 59,9% |
+| stable_diffusion_1_3 | 20,8% |
+| midjourney_v6_1 | 17,3% |
+| stable_diffusion_xl | 0,3% |
+| adobe_firefly, dalle2, sd_1_4, **sd_3** | ~0,0% |
+| **coco (real)** | **0,0%** |
+
+Coerente com o protocolo OOD: o gerador de treino é detectado com certeza, a
+imagem real é corretamente rejeitada, e os geradores recentes passam como reais.
+O Stable Diffusion 3 em 0,0% é a inversão da seção 4.5 vista em um caso
+individual.
+
+### Defeito corrigido durante a implementação
+
+A primeira versão do script alimentava a rede com a matriz de coocorrência
+**normalizada crua**, cujos valores são da ordem de 1e-5. O resultado foi
+saída praticamente constante — todas as imagens, inclusive a real, recebendo
+81,4% a 81,7%.
+
+A causa: `CooccurrenceDataset` aplica um reescalonamento por `1e4` antes de
+alimentar a rede, para evitar gradientes próximos de zero nas primeiras camadas.
+Reproduzir o pré-processamento à mão omitiu esse fator.
+
+A correção passou a construir a entrada pelo **próprio `CooccurrenceDataset`**,
+em vez de replicar a transformação — assim o script não pode divergir do
+pipeline de inferência em mudanças futuras. Registrado porque é o tipo de erro
+que produziria figuras sem sentido apresentadas como resultado.
+
+---
+
 ## 5. Protocolo de robustez
 
 1.000 imagens in-distribution sob nove degradações.

@@ -1,0 +1,14 @@
+gerador,n,todas_erram,taxa
+stable_diffusion_3,1000,660,0.66
+dalle3,1000,585,0.585
+adobe_firefly,1000,334,0.334
+midjourney_v6_1,638,153,0.23981191222570533
+gigagan,1000,237,0.237
+midjourney_v5,1000,212,0.212
+flux,1000,191,0.191
+dalle2,1000,163,0.163
+stable_diffusion_xl,1000,153,0.153
+stable_diffusion_2,1000,129,0.129
+stable_diffusion_1_4,1000,89,0.089
+stable_diffusion_1_3,1000,86,0.086
+real,3150,1,0.00031746031746031746
