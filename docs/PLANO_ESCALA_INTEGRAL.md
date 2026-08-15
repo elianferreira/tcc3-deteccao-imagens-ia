@@ -33,9 +33,72 @@ O teto real hoje é de **90.000 imagens reais**, metade da meta.
 
 O TCC 2 cita cinco bases reais (RAISE, FODB, ImageNet, COCO, Open Images).
 Dessas, apenas COCO está disponível: RAISE exige formulário de registro,
-ImageNet exige conta aprovada, FODB e Open Images exigem cadastro. LSUN, que é
-a fonte efetivamente usada por Corvi, é distribuída em formato LMDB por
-categoria, com dezenas de gigabytes por categoria.
+ImageNet exige conta aprovada, FODB e Open Images exigem cadastro.
+
+### LSUN — investigação completa e por que foi descartado
+
+A metade faltante das imagens reais vem do LSUN. A viabilidade foi apurada em
+detalhe, não presumida.
+
+**O servidor está no ar e aceita requisições parciais.** `dl.yf.io/lsun/objects/`
+responde HTTP 200, e um pedido `Range` devolve `206 Partial Content` com
+`Content-Range` correto. Em princípio, isso permitiria baixar apenas as
+entradas necessárias em vez do arquivo inteiro.
+
+**Os arquivos são grandes demais para download integral.** As 20 categorias
+referenciadas somam mais de 1 TB:
+
+| Categoria | Tamanho | Categoria | Tamanho |
+|---|---|---|---|
+| car | 173 GB | boat | 86 GB |
+| bicycle | 129 GB | bird | 65 GB |
+| bottle | 64 GB | cat | 42 GB |
+| airplane | 34 GB | bus | 24 GB |
+
+**O acesso seletivo não funciona.** Inspecionado o conteúdo de `bus.zip` por
+requisições parciais, o arquivo tem **três** entradas:
+
+```
+bus/            0 bytes
+bus/data.mdb    26.125.824.000 bytes    (compress_type=0)
+bus/lock.mdb    6.528 bytes
+```
+
+Não são imagens: é um banco **LMDB**. Não existe entrada por imagem para
+requisitar, de modo que `Range` só serviria para baixar os 24 GB inteiros. Ler
+LMDB remotamente exigiria implementar uma camada de páginas sobre HTTP, sem
+suporte em nenhuma biblioteca disponível.
+
+**E o mapeamento de nomes seria inverificável.** Os nomes em `real_lsun.txt`
+seguem o padrão `bus_02020.png`. Analisada a distribuição dos índices:
+
+| | Valor |
+|---|---|
+| Faixa de índices por categoria | 0 a ~20.000 |
+| Imagens por categoria | ~4.500 |
+| Densidade | ~22% |
+
+Corvi et al. tomaram as primeiras 20.000 imagens de cada categoria em ordem de
+cursor e amostraram cerca de 4.500. Reproduzir isso exigiria ler os 20.000
+primeiros registros de cada LMDB **e** assumir que a ordem de iteração é
+idêntica à deles — o que não é verificável sem o script de extração original.
+
+**Conclusão:** o obstáculo não é espaço em disco. É que o esforço seria
+desproporcional e o resultado, incorreto de forma indetectável. A limitação de
+50% nas imagens reais é definitiva para este trabalho.
+
+### Decisão sobre ampliar com o restante do COCO
+
+Considerou-se elevar os reais de 90.000 para 123.287 usando as imagens do COCO
+train2017 fora da lista oficial mais o val2017 — o que levaria a cobertura de
+50% para 68% da meta.
+
+**Descartado deliberadamente.** As 90.000 imagens atuais são *exatamente* as de
+Corvi et al. (2024); a redução é de quantidade, jamais de procedência. Misturar
+imagens fora da lista oficial trocaria uma limitação simples e defensável
+("metade do conjunto, mas idêntico à fonte") por uma composta ("dois terços do
+conjunto, dos quais um terço não é o original"). A primeira é mais forte na
+defesa.
 
 ### Armazenamento — bloqueio imediato ✗
 
