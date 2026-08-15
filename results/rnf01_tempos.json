@@ -1,0 +1,32 @@
+{
+  "limite_s": 30.0,
+  "n_amostra": 200,
+  "soma_medias_s": 0.2183710615019663,
+  "tecnicas": {
+    "T01_cpu": {
+      "n": 200,
+      "media_s": 0.0645086445013294,
+      "desvio_s": 0.004754423644026079,
+      "mediana_s": 0.06419855001149699,
+      "maximo_s": 0.11710560001665726,
+      "aprovado": true
+    },
+    "T03_cpu": {
+      "n": 200,
+      "media_s": 0.1536843140007113,
+      "desvio_s": 0.010080631824202706,
+      "mediana_s": 0.15371255003265105,
+      "maximo_s": 0.21045489999232814,
+      "aprovado": true
+    },
+    "T05_cpu": {
+      "n": 200,
+      "media_s": 0.00017810299992561342,
+      "desvio_s": 0.00013731685601226805,
+      "mediana_s": 0.00015065001207403839,
+      "maximo_s": 0.001991800032556057,
+      "aprovado": true,
+      "observacao": "mede apenas a regressao logistica sobre escores prontos; o custo real de T05 e a soma das tecnicas que agrega"
+    }
+  }
+}

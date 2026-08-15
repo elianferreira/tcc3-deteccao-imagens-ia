@@ -21,11 +21,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.config import (                                     # noqa: E402
-    DATA_DIR, FUSION_CALIBRATION_GENERATORS, SEED, TRAINING_GENERATORS, ensure_dirs,
+    DATA_DIR, DIFFUSION_GENERATORS, FUSION_CALIBRATION_GENERATORS, HELD_OUT_GENERATORS,
+    SEED, TRAINING_GENERATORS, ensure_dirs,
 )
 from src.data.manifest import (                              # noqa: E402
     assign_splits, filter_generators, format_report, index_corpus, ood_split,
-    reserve_fusion_calibration, verify_integrity, write_manifest,
+    ood_split_familias, reserve_fusion_calibration, verify_integrity, write_manifest,
 )
 
 
@@ -35,7 +36,12 @@ def main() -> int:
                         help="raiz do corpus, com subdiretorios real/ e fake/")
     parser.add_argument("--manifest", type=Path, default=None,
                         help="caminho de saida do manifesto CSV")
-    parser.add_argument("--protocol", choices=["standard", "ood"], default="standard")
+    parser.add_argument("--protocol", choices=["standard", "ood", "ood_familias"],
+                        default="standard",
+                        help="ood: treina em um gerador e avalia nos treze restantes "
+                             "(mais rigoroso). ood_familias: treina nos dez geradores de "
+                             "difusao e avalia em GigaGAN e Midjourney, conforme a "
+                             "Secao 3.6.1 do TCC 2")
     parser.add_argument("--no-fusion-split", action="store_true",
                         help="nao reserva o conjunto de calibracao de T05 no protocolo OOD")
     parser.add_argument("--seed", type=int, default=SEED)
@@ -82,7 +88,16 @@ def main() -> int:
         print(f"  restritas a {TRAINING_GENERATORS}: {before} -> {len(entries)} imagens")
 
     entries = assign_splits(entries, seed=args.seed)
-    if args.protocol == "ood":
+    if args.protocol == "ood_familias":
+        # Variante fiel a Secao 3.6.1: as familias GigaGAN e Midjourney ficam
+        # inteiramente fora do treinamento. Nao se reserva conjunto de
+        # calibracao aqui: glide, usado para isso no outro protocolo, integra o
+        # treinamento nesta variante. T05 e calibrada sobre validacao.
+        entries = ood_split_familias(entries)
+        entries = [e for e in entries if e.split != "excluded"]
+        print(f"  treino: difusao {DIFFUSION_GENERATORS[:3]}... + {TRAINING_GENERATORS}")
+        print(f"  teste:  {HELD_OUT_GENERATORS}")
+    elif args.protocol == "ood":
         entries = ood_split(entries)
         entries = [e for e in entries if e.split != "excluded"]
         if not args.no_fusion_split:
