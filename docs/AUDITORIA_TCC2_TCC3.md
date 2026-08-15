@@ -167,21 +167,68 @@ histórico e sem cópia remota.
 
 ## Resumo das lacunas, por prioridade
 
-| # | Lacuna | Etapa | Esforço | Impacto |
-|---|---|---|---|---|
-| 1 | T01 com 3 sementes (42, 123, 456) | 4 | ~6-9 h | **Alto** — exigência textual; sem isso não há desvio padrão |
-| 2 | Análise de erros | 5 | ~3 h | **Alto** — sustenta o achado da inversão no SD3 |
-| 3 | Grad-CAM para T01 | 5 | ~2 h | Médio — exigência textual |
-| 4 | Protocolo OOD do TCC | 4 | ~4 h | Médio — separa efeito de diversidade do treino |
-| 5 | Repositório Git | 7 | ~15 min | **Alto** — risco de perda total |
-| 6 | Verificação T02 × AUC publicada (5 p.p.) | 3 | ~1 h | Médio |
-| 7 | RNF01 em CPU, 1.000 imagens | 3 | ~2 h | Baixo — limitação já declarável |
-| 8 | T04 completa | 2 | — | Bloqueada; replicação parcial em curso |
+Situação em 15/08/2026.
+
+| # | Lacuna | Etapa | Estado |
+|---|---|---|---|
+| 1 | T01 com 3 sementes (42, 123, 456) | 4 | 🔄 **em execução** |
+| 2 | Análise de erros | 5 | ✓ `scripts/analise_de_erros.py` |
+| 3 | Grad-CAM para T01 | 5 | ✓ `scripts/gradcam_t01.py` |
+| 4 | Protocolo OOD do TCC | 4 | 🔄 manifesto pronto, treino enfileirado |
+| 5 | Repositório Git | 7 | ✓ github.com/elianferreira/tcc3-deteccao-imagens-ia |
+| 6 | Verificação contra AUC publicada | 3 | ~ T04 conferida; ressalva registrada |
+| 7 | RNF01 em CPU, 1.000 imagens | 3 | ~ T01/T03/T05 medidas; T02 enfileirada |
+| 8 | T04 completa | 2 | ✗ bloqueada — replicação parcial entregue |
+| 9 | Escala integral | 1 | 🔄 193.000 imagens em montagem |
+
+### Detalhamento do que ficou parcial
+
+**#6 — verificação contra valores publicados.** T04 objeto-sombra medida em
+0,8216 (máscaras com conteúdo), compatível com os 0,80–0,82 de Sarkar et al.
+(2024). Ressalva: os valores do artigo vieram da Figura 2, não de tabela; a
+conferência definitiva permanece pendente. T02 ainda não foi confrontada com a
+AUC publicada por Karageorgiou et al. (2025).
+
+**#7 — RNF01.** Medidas em CPU: T01 0,0645 s, T03 0,1537 s, T05 0,0002 s por
+imagem, somando 0,218 s contra o limite de 30 s. T02 depende da GPU, ocupada
+pelo treino multi-semente, e está enfileirada em
+`scripts/pipeline_pos_multiseed.py`.
+
+**Divergência interna do TCC 2 detectada.** O texto de RNF01 (Quadro 3) manda
+medir com "GPU para as técnicas T02 e T04 e CPU para T01, T03 e T05". A Seção
+3.6.2 manda medir **tudo** em CPU e usar GPU apenas como referência
+complementar caso T02 exceda o limite. As duas especificações se contradizem.
+Adotada a Seção 3.6.2, por ser a do programa de teste. **Convém uniformizar o
+texto na monografia.**
+
+**#9 — escala.** Meta do TCC: 180.000 reais + 180.000 sintéticas. Em execução:
+90.000 + 90.000 + 13.000 do benchmark = 193.000. O teto de reais é 90.000
+porque metade do conjunto oficial de Corvi et al. vem do LSUN, não obtido.
+Proporção 1:1 mantida. Ver [`PLANO_ESCALA_INTEGRAL.md`](PLANO_ESCALA_INTEGRAL.md).
 
 ## O que foi entregue além do proposto
 
 - Normalização do corpus após detecção de confundidor de resolução e formato
-- Teste de DeLong e IC bootstrap
+- Teste de DeLong e IC bootstrap sobre as diferenças de AUC
 - Duas calibrações de T05 comparadas lado a lado
 - Replicação parcial de T04 (componente objeto-sombra) sobre o corpus dos autores
+- Investigação do efeito das máscaras vazias em T04 (ruído, não atalho)
+- Duas variantes do protocolo OOD, que separam diversidade de treino de mudança
+  de família arquitetural
 - Documentação metodológica das divergências
+
+## Erros cometidos e corrigidos durante a execução
+
+Registrados porque cada um produziria um resultado errado na monografia se não
+tivesse sido detectado.
+
+| Erro | Consequência se não corrigido |
+|---|---|
+| Confundidor de resolução e formato não detectado | T03 reportada com AUC 0,985 medindo compressão, não síntese |
+| Inversão medida por taxa de acerto em subconjunto de classe única | 28 inversões reportadas onde existe 1 |
+| Grad-CAM alimentado com a matriz de coocorrência crua, sem o fator 1e4 | Figuras sem sentido, com 81% para toda imagem |
+| Sobrescrita dos pesos do protocolo padrão pelo treino da variante OOD | Perda dos modelos que produziram os resultados documentados |
+| `SyntaxError` em `run_experiments.py` não detectado antes de rodada longa | 12 h de janela perdidas |
+
+Medida permanente adotada: `python -m compileall scripts src app tests` antes
+de disparar qualquer execução longa.
