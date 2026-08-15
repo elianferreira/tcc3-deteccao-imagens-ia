@@ -119,9 +119,35 @@ cai para ~70 h.
 |---|---|---|
 | Disco esgota durante a normalização | Alta | Verificação de espaço livre antes de cada etapa, com parada limpa |
 | Interrupção da máquina em 4 dias de execução | Alta | Já mitigado: normalização e manifestos são idempotentes e retomáveis |
-| T03 estoura RAM com 150.000 amostras × 540 características | **Média** | 150.000 × 540 × 8 bytes = 648 MB só de matriz; a busca em grade replica isso por processo. Limitar `n_jobs` ou reduzir a grade |
+| T03 estoura RAM com 150.000 amostras × 540 características | **Baixa** (reavaliado) | Ver nota abaixo |
 | Modelo de T03 acima de 1 GB | Alta | Já ocorre: 337 MB com 60.000 amostras. Não versionável; regenerável |
 | Resultados não melhorarem com a escala | Média | É resultado válido: indicaria saturação, e o colapso OOD passaria a ser atribuível à técnica, não ao volume de dados |
+
+### Nota sobre a memória de T03 — risco reavaliado para baixo
+
+A avaliação inicial deste documento afirmava que a busca em grade replicaria a
+matriz de características por processo, elevando o risco de estouro de RAM.
+**Isso está incorreto e foi verificado no código.**
+
+`src/techniques/t03_benford.py:297` já configura `GridSearchCV(n_jobs=1)`, com
+o comentário explícito de que "o paralelismo já ocorre dentro da floresta"
+(`RandomForestClassifier(n_jobs=-1)`). Como o joblib não cria processos para os
+pontos da grade, a matriz **não** é duplicada.
+
+Consumo real esperado a 150.000 amostras:
+
+| Item | Tamanho |
+|---|---|
+| Matriz completa (150.000 × 540 × 8 bytes) | 648 MB |
+| Partição de treino da validação cruzada (80%) | 518 MB |
+| Floresta ajustada | ~1 GB (extrapolado dos 337 MB a 60.000) |
+
+Total da ordem de 2 a 3 GB, confortável nos 16 GB disponíveis. O risco
+remanescente é o **tamanho do modelo em disco**, não a memória.
+
+Contingência caso ainda assim falte memória: reduzir `grid_n_estimators` de
+`(100, 200, 500)` para `(100, 200)`. Isso altera a metodologia e precisaria ser
+declarado, por isso não foi aplicado preventivamente.
 
 ---
 
