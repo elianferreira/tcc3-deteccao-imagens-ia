@@ -645,6 +645,40 @@ def test_t04_sem_variavel_de_ambiente_fica_indisponivel(tmp_path, monkeypatch):
         importlib.reload(modulo)
 
 
+def test_t04_com_as_tres_representacoes(tmp_path):
+    """Com os tres componentes extraidos, T04 agrega os tres.
+
+    O agregador e a media; ausencia continua sendo ausencia, e nao zero -- uma
+    coluna vazia some do vetor em vez de puxar a media para baixo.
+    """
+    from src.config import ExternalConfig
+    from src.techniques.t04_geometry import T04ProjectiveGeometry
+
+    escores = tmp_path / "componentes.csv"
+    escores.write_text(
+        "arquivo,split,label,object_shadow,perspective_fields,line_segment\n"
+        "coco_000001,test,0,0.10,0.20,0.30\n"      # media 0,20
+        "latent_diffusion_000001,test,1,0.90,,0.70\n",   # media 0,80, sem campos
+        encoding="utf-8",
+    )
+
+    technique = T04ProjectiveGeometry(
+        external=ExternalConfig(geometry_repo=tmp_path / "ausente"),
+        precomputed=escores,
+    )
+
+    caminhos = [tmp_path / "coco_000001.png", tmp_path / "latent_diffusion_000001.png"]
+    probabilidades = technique.predict_proba(caminhos)
+    assert probabilidades == pytest.approx([0.20, 0.80])
+
+    componentes = technique.last_component_scores_
+    assert componentes["object_shadow"] == pytest.approx([0.10, 0.90])
+    assert componentes["line_segment"] == pytest.approx([0.30, 0.70])
+    # A segunda imagem nao tem campo de perspectiva: ausente, nao imputado.
+    assert componentes["perspective_fields"][0] == pytest.approx(0.20)
+    assert np.isnan(componentes["perspective_fields"][1])
+
+
 def test_t04_recusa_imagem_sem_escore_extraido(tmp_path):
     """Imagem fora do subconjunto extraido nao deve receber escore inventado."""
     from src.config import ExternalConfig

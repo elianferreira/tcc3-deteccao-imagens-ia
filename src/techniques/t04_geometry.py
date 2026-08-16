@@ -103,19 +103,41 @@ class T04ProjectiveGeometry(BaseTechnique):
 
     # ------------------------------------------------------------------
 
-    def _load_precomputed(self) -> dict[str, float]:
-        """Escores de objeto-sombra ja calculados, indexados pelo nome base.
+    def _load_precomputed(self) -> dict[str, dict[str, float]]:
+        """Escores ja calculados, por componente, indexados pelo nome base.
 
-        Produzidos por ``scripts/avaliar_t04_corpus.py`` a partir dos mapas que
-        ``scripts/wsl/extrair_object_shadow_ssis.py`` extrai no WSL2. A chave e
-        o nome sem extensao porque o mapa e gravado em ``.jpg`` enquanto a
-        imagem de origem e ``.png``.
+        Aceita dois formatos:
+
+        * uma coluna por representacao (``object_shadow``,
+          ``perspective_fields``, ``line_segment``), produzido por
+          ``scripts/consolidar_escores_t04.py``;
+        * o formato antigo, de coluna unica ``escore_t04``, que era so de
+          objeto-sombra -- mantido para nao invalidar arquivos ja gerados.
+
+        A chave e o nome sem extensao: as representacoes intermediarias sao
+        gravadas com outras extensoes que a imagem de origem.
+
+        Celula vazia permanece ausente, e nao vira zero. A distincao importa: o
+        agregador usa ``nanmean``, de modo que uma representacao sem escore e
+        ignorada em vez de puxar a media para baixo.
         """
         if self._precomputed_cache is None:
-            cache: dict[str, float] = {}
+            cache: dict[str, dict[str, float]] = {}
             with self.precomputed.open(newline="", encoding="utf-8") as arquivo:
-                for linha in csv.DictReader(arquivo):
-                    cache[linha["arquivo"]] = float(linha["escore_t04"])
+                leitor = csv.DictReader(arquivo)
+                colunas = [c for c in (leitor.fieldnames or []) if c in COMPONENTS]
+                antigo = not colunas and "escore_t04" in (leitor.fieldnames or [])
+
+                for linha in leitor:
+                    if antigo:
+                        cache[linha["arquivo"]] = {"object_shadow": float(linha["escore_t04"])}
+                        continue
+                    valores = {}
+                    for componente in colunas:
+                        bruto = (linha.get(componente) or "").strip()
+                        if bruto:
+                            valores[componente] = float(bruto)
+                    cache[linha["arquivo"]] = valores
             self._precomputed_cache = cache
         return self._precomputed_cache
 
@@ -220,17 +242,29 @@ class T04ProjectiveGeometry(BaseTechnique):
         demais seguem pelo contrato de ``infer.py`` descrito abaixo, que
         continua sem extrator.
         """
-        if (component == "object_shadow"
-                and self.precomputed is not None and self.precomputed.exists()):
+        if self.precomputed is not None and self.precomputed.exists():
             cache = self._load_precomputed()
-            faltando = [p.stem for p in paths if p.stem not in cache]
-            if faltando:
+
+            # Duas ausencias distintas, com tratamentos distintos.
+            #
+            # Imagem fora do arquivo: nunca foi extraida, e pedir escore para
+            # ela e erro do chamador -- falha alto, com instrucao de como
+            # corrigir.
+            desconhecidas = [p.stem for p in paths if p.stem not in cache]
+            if desconhecidas:
                 raise TechniqueError(
-                    f"objeto-sombra: {len(faltando)} imagens sem escore "
-                    f"pre-extraido (ex.: {faltando[:3]}). Rode a extracao para "
-                    "este subconjunto: scripts/t04_extracao.bat"
+                    f"{component}: {len(desconhecidas)} imagens fora dos escores "
+                    f"pre-extraidos (ex.: {desconhecidas[:3]}). Rode a extracao "
+                    "para este subconjunto e consolide com "
+                    "scripts/consolidar_escores_t04.py"
                 )
-            return np.asarray([cache[p.stem] for p in paths], dtype=np.float64)
+
+            # Imagem presente, mas sem esta representacao: ausencia legitima --
+            # um extrator pode ter rodado sobre um subconjunto menor que outro.
+            # Vira NaN, que ``nanmean`` ignora, em vez de derrubar a coluna
+            # inteira por causa de uma imagem.
+            return np.asarray([cache[p.stem].get(component, np.nan) for p in paths],
+                              dtype=np.float64)
 
         return self._run_component_oficial(component, paths)
 
