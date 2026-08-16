@@ -1,6 +1,6 @@
 # Estado atual e como retomar
 
-Atualizado em 15/08/2026, 23:15.
+Atualizado em 16/08/2026.
 
 Este arquivo existe para que o trabalho possa ser retomado em outra sessão sem
 depender do histórico da conversa. Tudo que importa está no repositório.
@@ -19,14 +19,12 @@ dizer:
 O TCC 2 (documento de projeto) está em
 `C:\Users\ferre\Downloads\TCC_2_Elian_Ferreira.pdf`.
 
-**Nada em execução depende da sessão.** As duas execuções longas rodam pelo
-Agendador de Tarefas do Windows (`tcc3_multiseed` e `tcc3_pos_multiseed`) e
-continuam mesmo com o terminal fechado.
+As execuções longas rodam pelo Agendador de Tarefas do Windows e sobrevivem ao
+fechamento do terminal — mas **não** ao fim da sessão; ver a armadilha 2.
 
 ```powershell
-schtasks /query /tn "tcc3_multiseed" /fo list
 schtasks /query /tn "tcc3_pos_multiseed" /fo list
-Get-Content logs\multiseed.log -Tail 5
+Get-Content logs\pos_multiseed.log -Tail 5
 ```
 
 ---
@@ -47,14 +45,15 @@ Repositório: <https://github.com/elianferreira/tcc3-deteccao-imagens-ia> (priva
 
 ## Em execução (seguem sozinhos, sem a sessão)
 
-**Nada em execução.** A GPU está livre.
+| Item | Mecanismo | Como acompanhar |
+|---|---|---|
+| RNF01 com T02 + OOD por famílias | tarefa `tcc3_pos_multiseed` | `logs/pos_multiseed.log` |
 
-O próximo item da fila é `tcc3_pos_multiseed`, que parou em 15/08 e precisa ser
-relançado do zero (RNF01 com T02 e o protocolo OOD por famílias):
+Lançado em 16/08. Estimativa de 6 a 8 h, dominada pelo treino de T01 (~135 min)
+e pela inferência de T02 (~190 min, a 652 ms por imagem). **Não é retomável**:
+usa `--fit`, então recomeça do zero se morrer.
 
-```powershell
-schtasks /run /tn "tcc3_pos_multiseed"
-```
+Ocupa a GPU — T02 na interface falha enquanto isso durar (armadilha 4).
 
 ### Processos que morrem com a sessão
 
@@ -168,12 +167,20 @@ A semente 123 demorou mais por dividir CPU e disco com a montagem do corpus.
 
 | # | Item | Observação |
 |---|---|---|
-| 1 | RNF01 com T02 + OOD por famílias | `tcc3_pos_multiseed`; GPU livre, pode ser relançado |
-| 2 | Isolar corpus × origem das máscaras em T04 | exige o dataset Kandinsky dos autores; ver seção 4.8 de `RESULTADOS.md` |
-| 3 | Campanha em escala | `scripts/pipeline_campanha.py --corpus data/corvi2024_escala --prefixo escala`; ~4 dias com três sementes |
-| 4 | Verificar T02 contra a AUC publicada | Etapa 3, tolerância de 5 p.p. |
-| 5 | Conferir T04 contra a **tabela** do artigo | os valores usados vieram da figura |
-| 6 | T04 completa | perspectiva e segmentos de reta seguem sem extrator; ver `external/CONTRATO.md` |
+| # | Item | Observação |
+|---|---|---|
+| 1 | Campanha em escala | `scripts/pipeline_campanha.py --corpus data/corvi2024_escala --prefixo escala`; travada na decisão de sementes |
+| 2 | Extrator de `perspective_fields` | levaria T04 de 1/3 a 2/3; detectron2 já funciona no WSL2 |
+| 3 | Isolar corpus × origem das máscaras em T04 | exige o dataset Kandinsky dos autores; ver seção 4.8 de `RESULTADOS.md` |
+| 4 | Extrator de `line_segment` | o mais incerto: os autores não identificam o detector usado |
+
+### Encerrados nesta sessão
+
+| Item | Desfecho |
+|---|---|
+| Verificar T02 contra a AUC publicada | **feito** — `scripts/verificar_t02_publicado.py`, seção 4.9 de `RESULTADOS.md` |
+| Conferir T04 contra a tabela do artigo | **impossível** — Sarkar et al. (2024) não publicam tabela de AUC, só curvas ROC |
+| Manifestos da escala | **feito** — os três gerados |
 
 ---
 

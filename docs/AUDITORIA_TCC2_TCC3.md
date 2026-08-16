@@ -176,18 +176,42 @@ Situação em 15/08/2026.
 | 3 | Grad-CAM para T01 | 5 | ✓ `scripts/gradcam_t01.py` |
 | 4 | Protocolo OOD do TCC | 4 | 🔄 manifesto pronto, treino enfileirado |
 | 5 | Repositório Git | 7 | ✓ github.com/elianferreira/tcc3-deteccao-imagens-ia |
-| 6 | Verificação contra AUC publicada | 3 | ~ T04 conferida; ressalva registrada |
+| 6 | Verificação contra AUC publicada | 3 | ~ T02 conferida (+6,1 p.p. em resolução nativa); T04 contra figura, não tabela |
 | 7 | RNF01 em CPU, 1.000 imagens | 3 | ~ T01/T03/T05 medidas; T02 enfileirada |
 | 8 | T04 completa | 2 | ✗ bloqueada — replicação parcial entregue |
 | 9 | Escala integral | 1 | 🔄 193.000 imagens em montagem |
 
 ### Detalhamento do que ficou parcial
 
-**#6 — verificação contra valores publicados.** T04 objeto-sombra medida em
-0,8216 (máscaras com conteúdo), compatível com os 0,80–0,82 de Sarkar et al.
-(2024). Ressalva: os valores do artigo vieram da Figura 2, não de tabela; a
-conferência definitiva permanece pendente. T02 ainda não foi confrontada com a
-AUC publicada por Karageorgiou et al. (2025).
+**#6 — verificação contra valores publicados.**
+
+**T04:** a conferência contra a tabela do artigo era impossível — Sarkar et al.
+(2024) **não publicam tabela de AUC**. O artigo tem duas tabelas (curadoria do
+corpus, e concordância entre pistas no suplementar) e reporta todo o desempenho
+por curvas ROC. A leitura de figura é a única aferição disponível. Por
+subconjunto (`outdoor`): duas das quatro comparações caem dentro da tolerância,
+e as quatro ficam 3 a 7 p.p. **abaixo** do publicado. Detalhe na seção 4.7 de
+`RESULTADOS.md`. Item encerrado por impossibilidade da fonte.
+
+**T02 foi confrontada** com a Tabela 1 de Karageorgiou et al. (2025) —
+`scripts/verificar_t02_publicado.py`, seção 4.9 de `RESULTADOS.md`. A comparação
+é gerador a gerador, porque o benchmark deste trabalho usa os mesmos 13
+geradores do artigo.
+
+Resultado com duas leituras, e as duas precisam ser reportadas:
+
+- **Sobre `glide`, o único gerador que a normalização não altera** (nativo
+  256×256): AUC medida 0,9626 contra 0,9020 publicada, **+6,1 p.p.** — a
+  replicação é confirmada, e supera o publicado.
+- **Sobre os 12 demais:** média 0,733 contra 0,911, **−17,8 p.p.**, fora da
+  tolerância. Os dois únicos dentro dela (SD 1.3 e 1.4, −3,4 e −3,3 p.p.) são os
+  que menos perderam resolução.
+
+A causa é a normalização para 256×256, adotada contra o confundidor de resolução
+(lacuna resolvida em `DECISOES_METODOLOGICAS.md`, seção 4), que destrói a
+evidência espectral de alta frequência de que T02 depende. As duas exigências
+são incompatíveis neste corpus, e isso é achado a discutir no Capítulo 4, não
+defeito a corrigir.
 
 **#7 — RNF01.** Medidas em CPU: T01 0,0645 s, T03 0,1537 s, T05 0,0002 s por
 imagem, somando 0,218 s contra o limite de 30 s. T02 depende da GPU, ocupada

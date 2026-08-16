@@ -1,0 +1,111 @@
+{
+  "fonte_publicada": "Karageorgiou et al. (2025), Tabela 1, arXiv:2411.19417v2",
+  "medido_em": "results\\resultados_ood_por_gerador_20260813_135944.csv",
+  "tolerancia_pp": 5.0,
+  "media_medida": 0.7331932284254699,
+  "media_publicada": 0.911,
+  "diferenca_media_pp": -17.780677157453017,
+  "dentro_da_tolerancia": [
+    "stable_diffusion_1_3",
+    "stable_diffusion_1_4"
+  ],
+  "controle_glide": {
+    "n": 2350,
+    "auc": 0.9625940740740739,
+    "publicado": 0.902,
+    "diferenca_pp": 6.059407407407392
+  },
+  "por_gerador": [
+    {
+      "gerador": "glide",
+      "lado_nativo": 256,
+      "auc_medida": null,
+      "auc_publicada": 0.902,
+      "diferenca_pp": null
+    },
+    {
+      "gerador": "stable_diffusion_1_3",
+      "lado_nativo": 512,
+      "auc_medida": 0.961748253968254,
+      "auc_publicada": 0.996,
+      "diferenca_pp": -3.4251746031745967
+    },
+    {
+      "gerador": "stable_diffusion_1_4",
+      "lado_nativo": 512,
+      "auc_medida": 0.962558253968254,
+      "auc_publicada": 0.996,
+      "diferenca_pp": -3.344174603174599
+    },
+    {
+      "gerador": "flux",
+      "lado_nativo": 896,
+      "auc_medida": 0.5636469841269841,
+      "auc_publicada": 0.83,
+      "diferenca_pp": -26.635301587301583
+    },
+    {
+      "gerador": "stable_diffusion_2",
+      "lado_nativo": 1000,
+      "auc_medida": 0.7158211111111111,
+      "auc_publicada": 0.965,
+      "diferenca_pp": -24.917888888888882
+    },
+    {
+      "gerador": "stable_diffusion_xl",
+      "lado_nativo": 1000,
+      "auc_medida": 0.8513015873015873,
+      "auc_publicada": 0.974,
+      "diferenca_pp": -12.269841269841264
+    },
+    {
+      "gerador": "dalle2",
+      "lado_nativo": 1024,
+      "auc_medida": 0.6950195238095237,
+      "auc_publicada": 0.911,
+      "diferenca_pp": -21.598047619047634
+    },
+    {
+      "gerador": "stable_diffusion_3",
+      "lado_nativo": 1024,
+      "auc_medida": 0.6079544444444445,
+      "auc_publicada": 0.759,
+      "diferenca_pp": -15.104555555555555
+    },
+    {
+      "gerador": "gigagan",
+      "lado_nativo": 1024,
+      "auc_medida": 0.6889073015873016,
+      "auc_publicada": 0.854,
+      "diferenca_pp": -16.509269841269834
+    },
+    {
+      "gerador": "midjourney_v6_1",
+      "lado_nativo": 1040,
+      "auc_medida": 0.6260098522167488,
+      "auc_publicada": 0.84,
+      "diferenca_pp": -21.39901477832512
+    },
+    {
+      "gerador": "dalle3",
+      "lado_nativo": 1080,
+      "auc_medida": 0.654508253968254,
+      "auc_publicada": 0.902,
+      "diferenca_pp": -24.749174603174605
+    },
+    {
+      "gerador": "midjourney_v5",
+      "lado_nativo": 1100,
+      "auc_medida": 0.7000312698412698,
+      "auc_publicada": 0.945,
+      "diferenca_pp": -24.49687301587301
+    },
+    {
+      "gerador": "adobe_firefly",
+      "lado_nativo": 2050,
+      "auc_medida": 0.7708119047619048,
+      "auc_publicada": 0.96,
+      "diferenca_pp": -18.91880952380952
+    }
+  ]
+}

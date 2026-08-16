@@ -424,16 +424,37 @@ imagens em que o extrator efetivamente produziu representação.
 
 ### Comparação com o valor publicado (Etapa 3)
 
-A Etapa 3 exige comparar com o artigo, tolerância de 5 p.p. Sarkar et al. (2024)
-reportam, para os subconjuntos difíceis, AUC da ordem de **0,80 a 0,82**.
+**A tabela que faltava não existe.** O artigo foi conferido inteiro: tem duas
+tabelas, e nenhuma traz AUC. A Tabela 1 é a estatística de curadoria do corpus;
+a Tabela 2, no material suplementar, mede concordância entre as três pistas para
+SDXL. Todos os resultados quantitativos são curvas ROC (Figuras 2, 6, 10 e 11).
 
-Medido: **0,8216** sobre máscaras com conteúdo — dentro da tolerância, o que
-sustenta que a replicação é fiel.
+Isso encerra o item que constava como pendente — "conferir contra a tabela do
+artigo" — por impossibilidade da fonte, não por falta de execução. A leitura de
+figura é a **única** aferição disponível, e a limitação é do artigo.
 
-**Ressalva honesta:** não foi possível extrair o valor exato do artigo em forma
-tabular; os números acima vêm da Figura 2 e do texto, e a leitura de figura não
-é base segura para um critério de 5 p.p. A conferência definitiva contra a
-tabela do artigo permanece pendente e deve ser feita na redação do Capítulo 4.
+Comparação por subconjunto, categoria `outdoor`, contra os valores lidos da
+Figura 2:
+
+| Subconjunto | Medido | Figura 2 | Dif. | |
+|---|---|---|---|---|
+| easy | 0,8293 | ~0,90 | −7,1 | fora |
+| unconfident | 0,7486 | ~0,78 | −3,1 | ✓ |
+| misclassified | 0,7341 | ~0,80 | −6,6 | fora |
+| prequalificado (união) | 0,7417 | ~0,79 | −4,8 | ✓ |
+
+Duas das quatro comparações ficam dentro da tolerância de 5 p.p., e **todas as
+quatro ficam abaixo** do publicado — um viés sistemático de 3 a 7 p.p., não
+ruído.
+
+**Como reportar, sem exagerar para nenhum dos lados.** O critério de 5 p.p. da
+Etapa 3 não pode ser aplicado com rigor aqui: os valores de referência foram
+lidos de curvas, e a própria leitura carrega erro da ordem de 1 a 2 p.p. O que
+se pode afirmar é que a replicação reproduz a **ordenação** e a **ordem de
+grandeza** dos subconjuntos — inclusive a queda de `easy` para os difíceis, que
+é o efeito central do artigo —, ficando consistentemente alguns pontos abaixo.
+Afirmar "dentro da tolerância" sem essa ressalva seria escolher o recorte
+favorável.
 
 ---
 
@@ -594,6 +615,83 @@ controlada; agora foi medida com uma fonte real que de fato não carrega sinal.
 O modelo de quatro fontes está em `weights/t05_fusion__quatro_fontes.pkl`.
 `weights/t05_fusion.pkl` segue sendo o de três fontes, que é o que a interface
 carrega.
+
+---
+
+## 4.9 T02 contra o valor publicado (Etapa 3)
+
+`scripts/verificar_t02_publicado.py` · Karageorgiou et al. (2025), Tabela 1.
+
+A comparação é direta, não aproximada: o benchmark deste trabalho usa **os
+mesmos 13 geradores** da Tabela 1 do artigo. E o modelo é o oficial, sem
+reajuste, treinado nas mesmas 180.000 imagens de latent diffusion de Corvi et
+al. que este trabalho usa.
+
+| Gerador | Nativo | Medido | Publicado | Dif. |
+|---|---|---|---|---|
+| glide | 256 px | *ver controle* | 0,902 | — |
+| stable_diffusion_1_3 | 512 px | 0,962 | 0,996 | **−3,4** ✓ |
+| stable_diffusion_1_4 | 512 px | 0,963 | 0,996 | **−3,3** ✓ |
+| flux | 896 px | 0,564 | 0,830 | −26,6 |
+| stable_diffusion_2 | 1000 px | 0,716 | 0,965 | −24,9 |
+| stable_diffusion_xl | 1000 px | 0,851 | 0,974 | −12,3 |
+| dalle2 | 1024 px | 0,695 | 0,911 | −21,6 |
+| stable_diffusion_3 | 1024 px | 0,608 | 0,759 | −15,1 |
+| gigagan | 1024 px | 0,689 | 0,854 | −16,5 |
+| midjourney_v6_1 | 1040 px | 0,626 | 0,840 | −21,4 |
+| dalle3 | 1080 px | 0,655 | 0,902 | −24,7 |
+| midjourney_v5 | 1100 px | 0,700 | 0,945 | −24,5 |
+| adobe_firefly | 2050 px | 0,771 | 0,960 | −18,9 |
+| **média** | | **0,733** | **0,911** | **−17,8** |
+
+A média fica 17,8 p.p. abaixo — muito fora da tolerância de 5 p.p. da Etapa 3.
+**Não é falha de replicação**, e a própria tabela mostra por quê: os dois únicos
+geradores dentro da tolerância são os dois que menos perderam resolução na
+normalização do corpus.
+
+### O controle que fecha a questão
+
+O `glide` é nativamente 256×256, de modo que a normalização deste trabalho **não
+o altera** — e é um gerador não visto no treinamento do SPAI. Ele ocupa a
+partição de calibração do protocolo OOD, então seus escores já estavam
+calculados.
+
+| | Valor |
+|---|---|
+| n | 2.350 (1.000 glide, 1.350 reais) |
+| AUC medida | **0,9626** |
+| AUC publicada | 0,9020 |
+| Diferença | **+6,1 p.p.** |
+
+Em resolução nativa o valor medido **supera** o publicado. A replicação de T02 é
+fiel; o desvio agregado vem da normalização.
+
+### A tensão metodológica que isso expõe
+
+Vale para a discussão do Capítulo 4, porque é um conflito real entre duas
+exigências do próprio trabalho.
+
+A normalização para 256×256 foi adotada na seção 4 de
+`DECISOES_METODOLOGICAS.md` para remover o confundidor de resolução — sem ela, o
+detector poderia separar real de sintético pelo tamanho da imagem em vez de pelo
+conteúdo. Era necessária.
+
+Mas T02 é, literalmente, *"Any-Resolution AI-Generated Image Detection by
+**Spectral** Learning"*: seu sinal é a distribuição espectral, e reamostrar para
+256×256 destrói justamente a evidência de alta frequência que a técnica explora.
+Remover o confundidor e preservar o sinal de T02 são objetivos incompatíveis
+neste corpus.
+
+Não há dose-resposta: a correlação entre fator de redução e desvio **não** é
+significativa (Spearman −0,35, p = 0,27). O efeito é de limiar — 0× fica acima
+do publicado, 2× fica dentro da tolerância, e a partir de ~3,5× a degradação
+satura entre −12 e −27 p.p. sem ordenação clara.
+
+**Como reportar.** A verificação da Etapa 3 para T02 deve ser feita sobre
+`glide`, o único gerador do benchmark que a normalização não afeta; nele a
+replicação é confirmada. Os demais medem a técnica sob reamostragem agressiva,
+que é uma condição diferente da avaliada pelos autores — e o número agregado de
+0,733 deve vir sempre acompanhado dessa ressalva.
 
 ---
 
