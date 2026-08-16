@@ -559,16 +559,108 @@ def test_t02_indisponivel_gera_erro_descritivo(tmp_path):
 
 
 def test_t04_indisponivel_gera_erro_descritivo(tmp_path):
+    """Sem escores pre-extraidos, T04 continua integralmente indisponivel.
+
+    ``precomputed`` aponta para um caminho inexistente de proposito: o padrao
+    da classe e ``results/t04_escores_combined.csv``, que existe nesta maquina
+    e tornaria a tecnica parcialmente disponivel.
+    """
     from src.config import ExternalConfig
     from src.techniques.t04_geometry import T04ProjectiveGeometry
 
     external = ExternalConfig(geometry_repo=tmp_path / "ausente")
-    technique = T04ProjectiveGeometry(external=external)
+    technique = T04ProjectiveGeometry(
+        external=external, precomputed=tmp_path / "sem_escores.csv")
 
     available, reason = technique.is_available()
     assert not available
     with pytest.raises(TechniqueError):
         technique.predict_proba([tmp_path / "qualquer.png"])
+
+
+def test_t04_parcial_com_escores_pre_extraidos(tmp_path):
+    """Com objeto-sombra extraido, T04 passa a contribuir com uma das tres.
+
+    O escore vem do CSV; campos de perspectiva e segmentos de reta seguem sem
+    extrator e entram como NaN, que ``nanmean`` ignora -- o mesmo mecanismo de
+    degradacao previsto em RN07. O valor agregado, portanto, e o proprio escore
+    de objeto-sombra.
+    """
+    from src.config import ExternalConfig
+    from src.techniques.t04_geometry import T04ProjectiveGeometry
+
+    escores = tmp_path / "escores.csv"
+    escores.write_text(
+        "arquivo,split,label,escore_t04\n"
+        "coco_000001,test,0,0.12\n"
+        "latent_diffusion_000001,test,1,0.93\n",
+        encoding="utf-8",
+    )
+
+    technique = T04ProjectiveGeometry(
+        external=ExternalConfig(geometry_repo=tmp_path / "ausente"),
+        precomputed=escores,
+    )
+
+    available, reason = technique.is_available()
+    assert available
+    assert "parcial" in reason and "objeto-sombra" in reason
+
+    caminhos = [tmp_path / "coco_000001.png", tmp_path / "latent_diffusion_000001.png"]
+    probabilidades = technique.predict_proba(caminhos)
+    assert probabilidades == pytest.approx([0.12, 0.93])
+
+    # As duas representacoes sem extrator ficam explicitamente ausentes, e nao
+    # imputadas: a analise de erros da Etapa 5 depende dessa distincao.
+    componentes = technique.last_component_scores_
+    assert np.isnan(componentes["perspective_fields"]).all()
+    assert np.isnan(componentes["line_segment"]).all()
+    assert componentes["object_shadow"] == pytest.approx([0.12, 0.93])
+
+
+def test_t04_sem_variavel_de_ambiente_fica_indisponivel(tmp_path, monkeypatch):
+    """O modo pre-extraido nao pode ligar sozinho.
+
+    Regressao real: quando a disponibilidade era deduzida da existencia do CSV,
+    T04 se anunciava disponivel na interface e falhava em toda imagem enviada --
+    os escores cobrem o corpus deste trabalho, nunca um envio arbitrario. RN07
+    exige o contrario: indisponibilidade declarada e as demais tecnicas seguindo.
+    """
+    import importlib
+
+    escores = tmp_path / "escores.csv"
+    escores.write_text("arquivo,split,label,escore_t04\ncoco_000001,test,0,0.12\n",
+                       encoding="utf-8")
+
+    monkeypatch.delenv("TCC3_T04_ESCORES", raising=False)
+    modulo = importlib.reload(importlib.import_module("src.techniques.t04_geometry"))
+    try:
+        assert modulo.DEFAULT_PRECOMPUTED is None
+        tecnica = modulo.T04ProjectiveGeometry()
+        disponivel, motivo = tecnica.is_available()
+        assert not disponivel
+        assert "nao operam sobre pixels" in motivo
+    finally:
+        # Outros testes dependem do modulo no estado original.
+        importlib.reload(modulo)
+
+
+def test_t04_recusa_imagem_sem_escore_extraido(tmp_path):
+    """Imagem fora do subconjunto extraido nao deve receber escore inventado."""
+    from src.config import ExternalConfig
+    from src.techniques.t04_geometry import T04ProjectiveGeometry
+
+    escores = tmp_path / "escores.csv"
+    escores.write_text("arquivo,split,label,escore_t04\ncoco_000001,test,0,0.12\n",
+                       encoding="utf-8")
+
+    technique = T04ProjectiveGeometry(
+        external=ExternalConfig(geometry_repo=tmp_path / "ausente"),
+        precomputed=escores,
+    )
+
+    with pytest.raises(TechniqueError, match="todas as representacoes falharam"):
+        technique.predict_proba([tmp_path / "imagem_nunca_extraida.png"])
 
 
 def test_conversao_de_logits_para_probabilidade():

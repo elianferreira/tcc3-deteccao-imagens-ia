@@ -23,12 +23,31 @@ A tecnica e executada em modo de inferencia. Os tres escores sao agregados em
 uma unica probabilidade, tal como no trabalho original; os escores individuais
 permanecem acessiveis em ``last_component_scores_`` para a analise de erros
 prevista na Etapa 5.
+
+Disponibilidade parcial
+-----------------------
+Os classificadores oficiais nao recebem pixels: cada um consome uma
+representacao geometrica ja extraida por um modelo auxiliar que depende de
+detectron2, sem suporte em Windows. Por isso T04 constava como indisponivel.
+
+Uma das tres representacoes deixou de estar bloqueada. O SSISv2 foi posto para
+rodar no WSL2 (``docs/T04_AMBIENTE_WSL2.md``) e os mapas objeto-sombra do
+corpus deste trabalho foram extraidos e classificados; os escores ficam em
+``results/t04_escores_combined.csv``. Quando esse arquivo existe, T04 passa a
+contribuir com **uma** das tres representacoes, e ``nanmean`` ignora as outras
+duas -- o mesmo mecanismo previsto em RN07 para falha de modulo.
+
+A consequencia deve ser dita onde o numero aparecer: o valor resultante nao e o
+T04 do artigo, e sim seu componente objeto-sombra isolado. Reporta-se como
+**T04 (objeto-sombra)**. Campos de perspectiva e segmentos de reta seguem sem
+extrator; ver ``external/CONTRATO.md``.
 """
 
 from __future__ import annotations
 
 import csv
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -43,6 +62,19 @@ from .base import BaseTechnique, TechniqueError
 
 COMPONENTS = ("perspective_fields", "line_segment", "object_shadow")
 
+# Escores de objeto-sombra ja extraidos, ativados **explicitamente** por
+# TCC3_T04_ESCORES.
+#
+# Por que uma variavel de ambiente e nao a mera existencia do arquivo: os
+# escores cobrem o corpus deste trabalho, e so ele. A interface recebe imagens
+# arbitrarias do usuario, que jamais estarao nesse CSV -- deduzir
+# disponibilidade da presenca do arquivo faria T04 se anunciar disponivel na
+# tela e falhar em toda imagem enviada, o oposto do que RN07 exige. O modo
+# pre-extraido pertence a campanha experimental, que o liga de proposito
+# (ver scripts/pipeline_t04_fusao.py).
+_ESCORES_ENV = os.environ.get("TCC3_T04_ESCORES")
+DEFAULT_PRECOMPUTED = Path(_ESCORES_ENV) if _ESCORES_ENV else None
+
 
 class T04ProjectiveGeometry(BaseTechnique):
     technique_id = "T04"
@@ -56,6 +88,7 @@ class T04ProjectiveGeometry(BaseTechnique):
         components: Sequence[str] = COMPONENTS,
         aggregation: str = "mean",
         timeout: int = 3600,
+        precomputed: Path | None = None,
     ) -> None:
         super().__init__(device=device)
         self.external = external
@@ -63,8 +96,28 @@ class T04ProjectiveGeometry(BaseTechnique):
         self.components = tuple(components)
         self.aggregation = aggregation
         self.timeout = timeout
+        self.precomputed = Path(precomputed) if precomputed else DEFAULT_PRECOMPUTED
         self.last_component_scores_: dict[str, np.ndarray] = {}
+        self._precomputed_cache: dict[str, float] | None = None
         self._fitted = True
+
+    # ------------------------------------------------------------------
+
+    def _load_precomputed(self) -> dict[str, float]:
+        """Escores de objeto-sombra ja calculados, indexados pelo nome base.
+
+        Produzidos por ``scripts/avaliar_t04_corpus.py`` a partir dos mapas que
+        ``scripts/wsl/extrair_object_shadow_ssis.py`` extrai no WSL2. A chave e
+        o nome sem extensao porque o mapa e gravado em ``.jpg`` enquanto a
+        imagem de origem e ``.png``.
+        """
+        if self._precomputed_cache is None:
+            cache: dict[str, float] = {}
+            with self.precomputed.open(newline="", encoding="utf-8") as arquivo:
+                for linha in csv.DictReader(arquivo):
+                    cache[linha["arquivo"]] = float(linha["escore_t04"])
+            self._precomputed_cache = cache
+        return self._precomputed_cache
 
     def _default_interpreter(self) -> str:
         repo = self.external.geometry_repo
@@ -76,6 +129,22 @@ class T04ProjectiveGeometry(BaseTechnique):
     # ------------------------------------------------------------------
 
     def is_available(self) -> tuple[bool, str]:
+        # Caminho dos escores pre-extraidos. Uma das tres representacoes --
+        # objeto-sombra -- deixou de estar bloqueada: o SSISv2 roda no WSL2
+        # (docs/T04_AMBIENTE_WSL2.md) e seus mapas ja foram extraidos para o
+        # corpus deste trabalho. As outras duas seguem sem extrator, e a
+        # agregacao por nanmean as ignora, conforme RN07.
+        #
+        # A tecnica passa a estar disponivel, mas o que ela mede nao e mais o
+        # T04 do artigo: e um de seus tres componentes. Onde o numero for
+        # reportado, deve aparecer como "T04 (objeto-sombra)".
+        if self.precomputed is not None and self.precomputed.exists():
+            return True, (
+                "parcial: apenas a representacao objeto-sombra, a partir de "
+                f"escores pre-extraidos em {self.precomputed.name}; campos de "
+                "perspectiva e segmentos de reta seguem sem extrator"
+            )
+
         repo = self.external.geometry_repo
         if not repo.exists():
             return False, (
@@ -145,6 +214,27 @@ class T04ProjectiveGeometry(BaseTechnique):
         return matrix
 
     def _run_component(self, component: str, paths: Sequence[Path]) -> np.ndarray:
+        """Escores de uma representacao geometrica.
+
+        Objeto-sombra vem dos escores pre-extraidos quando disponiveis; as
+        demais seguem pelo contrato de ``infer.py`` descrito abaixo, que
+        continua sem extrator.
+        """
+        if (component == "object_shadow"
+                and self.precomputed is not None and self.precomputed.exists()):
+            cache = self._load_precomputed()
+            faltando = [p.stem for p in paths if p.stem not in cache]
+            if faltando:
+                raise TechniqueError(
+                    f"objeto-sombra: {len(faltando)} imagens sem escore "
+                    f"pre-extraido (ex.: {faltando[:3]}). Rode a extracao para "
+                    "este subconjunto: scripts/t04_extracao.bat"
+                )
+            return np.asarray([cache[p.stem] for p in paths], dtype=np.float64)
+
+        return self._run_component_oficial(component, paths)
+
+    def _run_component_oficial(self, component: str, paths: Sequence[Path]) -> np.ndarray:
         """Executa o classificador oficial de uma representacao geometrica.
 
         A invocacao segue o contrato documentado em ``external/CONTRATO.md``:

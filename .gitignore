@@ -8,6 +8,12 @@ data/
 # Clonados por scripts/setup_external.py, com licencas proprias.
 external/
 
+# CONTRATO.md e documento autoral deste trabalho, nao codigo de terceiros: a
+# tabela de documentos em docs/ESTADO_ATUAL.md o lista e
+# docs/DECISOES_METODOLOGICAS.md aponta para ele. Sem esta excecao o link
+# quebra em qualquer clone.
+!external/CONTRATO.md
+
 # Ambiente virtual ----------------------------------------------------------
 .venv/
 __pycache__/
@@ -30,6 +36,14 @@ weights/backup_22k_confundido/
 #   python scripts/run_experiments.py --protocol standard --fit --techniques T03
 # A limitacao esta declarada no README.
 weights/t03_benford.pkl
+
+# Diretorios de variante (TCC3_WEIGHTS_DIR) ---------------------------------
+# Execucoes que nao podem sobrescrever o protocolo padrao gravam em diretorio
+# proprio -- weights_ood_familias/, weights_t04_fusao/. Eles sao area de
+# trabalho: contem copias e links dos pesos de terceiros ja excluidos acima.
+# O modelo pequeno que cada variante produz e copiado de volta para weights/
+# com sufixo proprio, e esse sim e versionado (ver Etapa 7).
+weights_*/
 
 # Resultados pesados --------------------------------------------------------
 # Metricas em CSV/JSON e figuras sao versionadas; vetores de escores brutos
