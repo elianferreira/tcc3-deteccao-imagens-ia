@@ -1,0 +1,85 @@
+{
+  "categoria": "outdoor",
+  "corpus": "Kandinsky_Outdoor (Sarkar et al., 2024)",
+  "pesos": "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\weights\\projective_geometry\\line_segment\\Lines_outdoor.pt",
+  "retas": "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\data\\projective_geometry_lines\\image_path_to_lines.pkl",
+  "n_retas_por_imagem": 250,
+  "subconjuntos": {
+    "easy": {
+      "n": 187469,
+      "n_gen": 93982,
+      "n_real": 93487,
+      "acuracia": 0.8839754839466791,
+      "auc": 0.9494514422309756,
+      "matriz_confusao": [
+        [
+          82974,
+          10513
+        ],
+        [
+          11238,
+          82744
+        ]
+      ],
+      "auc_media": 0.9494465345521734,
+      "auc_desvio": 4.334612897099379e-06
+    },
+    "unconfident": {
+      "n": 1410,
+      "n_gen": 575,
+      "n_real": 835,
+      "acuracia": 0.7730496453900709,
+      "auc": 0.8401687060661286,
+      "matriz_confusao": [
+        [
+          673,
+          162
+        ],
+        [
+          158,
+          417
+        ]
+      ],
+      "auc_media": 0.8401687060661286,
+      "auc_desvio": 0.0
+    },
+    "misclassified": {
+      "n": 1052,
+      "n_gen": 443,
+      "n_real": 609,
+      "acuracia": 0.7385931558935361,
+      "auc": 0.7928476909561988,
+      "matriz_confusao": [
+        [
+          470,
+          139
+        ],
+        [
+          136,
+          307
+        ]
+      ],
+      "auc_media": 0.7928476909561988,
+      "auc_desvio": 0.0
+    },
+    "prequalificado": {
+      "n": 2462,
+      "n_gen": 1018,
+      "n_real": 1444,
+      "acuracia": 0.7583265637692933,
+      "auc": 0.8200065034367534,
+      "matriz_confusao": [
+        [
+          1143,
+          301
+        ],
+        [
+          294,
+          724
+        ]
+      ],
+      "auc_media": 0.8200065034367534,
+      "auc_desvio": 0.0
+    }
+  }
+}

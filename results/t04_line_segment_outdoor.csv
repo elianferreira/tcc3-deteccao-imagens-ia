@@ -1,0 +1,5 @@
+tecnica,componente,categoria,subconjunto,n,auc,auc_desvio,acuracia
+T04,line_segment,outdoor,easy,187469,0.9494465345521734,4.334612897099379e-06,0.8839754839466791
+T04,line_segment,outdoor,unconfident,1410,0.8401687060661286,0.0,0.7730496453900709
+T04,line_segment,outdoor,misclassified,1052,0.7928476909561988,0.0,0.7385931558935361
+T04,line_segment,outdoor,prequalificado,2462,0.8200065034367534,0.0,0.7583265637692933

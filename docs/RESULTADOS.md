@@ -695,6 +695,78 @@ que é uma condição diferente da avaliada pelos autores — e o número agrega
 
 ---
 
+## 4.10 T04 — replicação do classificador de segmentos de reta
+
+`scripts/replicar_t04_line_segment.py` · corpus Kandinsky dos autores.
+
+Terceiro e último componente de T04. Como na seção 4.7, avalia o classificador
+**oficial** sobre os dados **dos autores** — não é comparável a T01, T02, T03 e
+T05, e serve de verificação da replicação.
+
+### O que destravou
+
+Os autores distribuem `image_path_to_lines.pkl` (1,8 GB, 1.049.919 imagens) com
+as retas já detectadas, do mesmo modo que distribuem as máscaras
+objeto-sombra prontas. Inspecioná-lo resolveu a dúvida que tornava a extração
+própria arriscada: **qual a convenção das coordenadas**, que o código oficial não
+documenta em ponto algum.
+
+| Propriedade | Valor medido |
+|---|---|
+| Forma | `(N, 4)` float32 — `x1, y1, x2, y2` |
+| Intervalo | −1,1 a 256,4 |
+
+São **pixels crus em quadro 256×256**, não coordenadas normalizadas. E 256×256 é
+exatamente o quadro do corpus normalizado deste trabalho, de modo que a extração
+própria com DeepLSD (Pautrat et al., 2023, o detector que o artigo nomeia) fica
+sem ambiguidade de escala.
+
+### Resultado
+
+Categoria `outdoor`, pesos oficiais:
+
+| Subconjunto | n | AUC | Figura 2 | Dif. | |
+|---|---|---|---|---|---|
+| easy | 187.469 | 0,9494 | ~0,95 | **−0,1** | ✓ |
+| unconfident | 1.410 | 0,8402 | ~0,78 | +6,0 | |
+| misclassified | 1.052 | 0,7928 | ~0,75 | **+4,3** | ✓ |
+| prequalificado | 2.462 | 0,8200 | ~0,77 | +5,0 | |
+
+Duas das quatro dentro da tolerância de 5 p.p., e o subconjunto `easy` bate
+quase exatamente (0,1 p.p.).
+
+**Um contraste que vale registrar.** Em objeto-sombra (seção 4.7) as quatro
+comparações ficaram 3 a 7 p.p. **abaixo** da figura; aqui ficam 0 a 6 p.p.
+**acima**. Os desvios não têm sinal comum, o que é o que se espera quando a
+referência vem de leitura de curva: o erro é da leitura, não da replicação. Nas
+duas representações a replicação reproduz a ordenação dos subconjuntos e a
+magnitude, que é o que a Etapa 3 pode aferir com esta fonte.
+
+### A amostragem "estocástica" é determinística nestes dados
+
+`LineSegmentDataset` fixa 250 retas por imagem, reamostrando com reposição
+quando há menos e subamostrando quando há mais (`lines_dataset.py:24-32`). Ambas
+usam `np.random.choice`, o que sugeriria variação entre execuções.
+
+Medido: entre três sementes, o desvio da AUC é **exatamente zero**. A explicação
+está nos dados — nenhuma imagem do subconjunto prequalificado chega a 250 retas:
+
+| | Valor |
+|---|---|
+| Mínimo | 2 retas |
+| Mediana | 81 retas |
+| Máximo | **234 retas** |
+| Acima de 250 | **0 imagens (0,0%)** |
+
+O caminho de subamostragem nunca é executado; só o de duplicação. E como o
+PointNet agrega os pontos por *max-pooling*, duplicar pontos não altera o
+máximo. A saída é determinística por construção, e não por acaso.
+
+Isso importa para reportar: não faz sentido apresentar desvio padrão sobre
+sementes de amostragem nesta representação.
+
+---
+
 ## 5. Protocolo de robustez
 
 1.000 imagens in-distribution sob nove degradações.
