@@ -45,16 +45,55 @@ Repositório: <https://github.com/elianferreira/tcc3-deteccao-imagens-ia> (priva
 
 ---
 
-## Em execução
+## Em execução (seguem sozinhos, sem a sessão)
 
 | Item | Mecanismo | Como acompanhar |
 |---|---|---|
-| Multi-semente de T01 (semente 456) | tarefa `tcc3_multiseed` | `logs/multiseed.log` |
 | RNF01 com T02 + OOD por famílias | tarefa `tcc3_pos_multiseed` | `logs/pos_multiseed.log` |
 | Regeneração das reais sem perfil ICC | processo destacado | `logs/corpus_reparo_icc.log` |
 
-O multi-semente é **retomável**: cada semente concluída fica em
-`results/multiseed/` e é reaproveitada se a execução for reiniciada.
+Ambos são retomáveis e não precisam de supervisão. Para interrompê-los:
+
+```powershell
+schtasks /end /tn "tcc3_pos_multiseed"
+Get-Content logs\corpus_reparo_icc.pid | ForEach-Object { taskkill /PID $_ /T /F }
+```
+
+Para retomar a regeneração do corpus depois:
+
+```powershell
+python scripts\lancar_destacado.py --log logs\corpus_reparo_icc.log `
+  --err logs\corpus_reparo_icc.err --anexar -- `
+  .venv\Scripts\python.exe -u scripts\preparar_corpus_escala.py `
+  --n-real 90000 --n-sintetica 90000
+```
+
+## PONTO DE RETOMADA — onde o trabalho parou
+
+O último item em andamento manual era o **extrator de T04 no WSL2**.
+
+Estado: o SSISv2 **já roda na GPU** e produz máscaras corretamente. O ambiente
+completo está descrito em [`T04_AMBIENTE_WSL2.md`](T04_AMBIENTE_WSL2.md),
+inclusive os seis obstáculos vencidos, que não estão documentados em lugar
+nenhum.
+
+O que falta, em ordem:
+
+1. Escrever o agregador que reduz as `N` máscaras de instância a dois mapas
+   binários — um de `Object`, um de `Shadow` — no formato de
+   `object_shadow/dataset.py:20-21`
+2. Rodar sobre o corpus (~0,17 s por imagem; ~40 min para as 12.638 do benchmark)
+3. Alimentar os classificadores oficiais com
+   `scripts/replicar_t04_object_shadow.py`, já validado
+4. T04 então entra na tabela comparativa e na fusão T05 (quatro fontes, não três)
+
+Verificação rápida de que o ambiente do WSL continua de pé:
+
+```powershell
+wsl -d Ubuntu-24.04 -u root -- /root/geo/bin/python -c "from detectron2 import _C; print(hasattr(_C,'modulated_deform_conv_forward'))"
+```
+
+Deve imprimir `True`. Se imprimir erro, refazer pelo `T04_AMBIENTE_WSL2.md`.
 
 ---
 
@@ -68,6 +107,8 @@ O multi-semente é **retomável**: cada semente concluída fica em
 - Manifesto padrão do corpus em escala
 - Corpus em escala montado: 192.638 imagens
 - Três confundidores investigados: resolução, formato e perfil ICC
+- **Multi-semente de T01 (Etapa 4)** — AUC 0,9964 ± 0,0002
+- **Extratores de T04 desbloqueados no WSL2** — SSISv2 rodando na GPU
 
 ### Resultados principais já obtidos
 
@@ -83,7 +124,16 @@ Protocolo padrão, corpus de 30k:
 Protocolo OOD: colapso de 17 a 26 p.p., persistente com 60.000 imagens de
 treino. Detalhes e testes de significância em `docs/RESULTADOS.md`.
 
-Multi-semente (parcial): semente 42 com AUC 0,9961; semente 123 com 0,9965.
+Multi-semente de T01, conforme a Etapa 4 exige:
+
+| Semente | AUC | Acurácia | Tempo |
+|---|---|---|---|
+| 42 | 0,9961 | 0,9689 | 102 min |
+| 123 | 0,9965 | 0,9714 | 276 min |
+| 456 | 0,9965 | 0,9713 | 132 min |
+| **Média ± DP** | **0,9964 ± 0,0002** | **0,9706 ± 0,0014** | |
+
+A semente 123 demorou mais por dividir CPU e disco com a montagem do corpus.
 
 ---
 
