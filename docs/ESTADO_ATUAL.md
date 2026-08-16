@@ -184,15 +184,27 @@ A semente 123 demorou mais por dividir CPU e disco com a montagem do corpus.
 
 ---
 
-## Decisão em aberto
+## Decisão tomada: a campanha em escala não será executada
 
-A campanha em escala com as três sementes leva cerca de 4 dias; com semente
-única, 2 dias e meio. A Etapa 4 exige as três explicitamente, mas a
-variabilidade medida na escala de 30k foi de 0,0004 em AUC entre as sementes 42
-e 123.
+Decidido em 16/08/2026, depois de fechada a cadeia de T04.
 
-Alternativa defensável: rodar a escala com semente única e reportar o desvio
-padrão medido em 30k, declarando a escolha. **Não decidido.**
+A campanha sobre as 192.638 imagens levaria de 2,5 dias (semente única) a 4 dias
+(três sementes). **Optou-se por não executá-la** e manter os resultados sobre o
+corpus de 30k, que já são completos: protocolo padrão, OOD, OOD por famílias,
+robustez, multi-semente e análise de erros.
+
+Justificativa. O corpus em escala existe e está montado, com os três manifestos
+prontos — a escala foi **viabilizada**, que era o objetivo da Etapa 1. O que a
+execução acrescentaria é uma repetição das mesmas medições com mais dados, e a
+Seção 3 de `DECISOES_METODOLOGICAS.md` já mostra que o colapso OOD persiste com
+60.000 imagens de treino, isto é, não é efeito de escala insuficiente.
+
+O tempo foi realocado para fechar mais um componente de T04, que é a lacuna real
+em relação ao que o TCC 2 propôs.
+
+**Reversível.** Nada foi descartado: corpus e manifestos estão em disco, e a
+campanha é um comando (`scripts/pipeline_campanha.py --corpus
+data/corvi2024_escala --prefixo escala`).
 
 ---
 

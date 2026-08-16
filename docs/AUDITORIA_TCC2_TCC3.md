@@ -6,6 +6,12 @@ declarada.
 
 Legenda: **✓** cumprido · **~** parcial · **✗** não feito
 
+> **Como ler este documento.** As seções por Etapa registram a auditoria
+> **original**, feita quando as lacunas foram levantadas, e são preservadas
+> como histórico — várias das lacunas que elas apontam já foram fechadas desde
+> então. O estado **atual** é o da tabela [Resumo das lacunas](#resumo-das-lacunas-por-prioridade),
+> no fim do arquivo. Em caso de divergência, vale o resumo.
+
 ---
 
 ## Etapa 1 — Preparação do ambiente e do dataset ✓
@@ -177,7 +183,7 @@ Situação em 15/08/2026.
 | 4 | Protocolo OOD do TCC | 4 | 🔄 manifesto pronto, treino enfileirado |
 | 5 | Repositório Git | 7 | ✓ github.com/elianferreira/tcc3-deteccao-imagens-ia |
 | 6 | Verificação contra AUC publicada | 3 | ~ T02 conferida (+6,1 p.p. em resolução nativa); T04 contra figura, não tabela |
-| 7 | RNF01 em CPU, 1.000 imagens | 3 | ~ T01/T03/T05 medidas; T02 enfileirada |
+| 7 | RNF01 em CPU, 1.000 imagens | 3 | ✓ as quatro medidas; soma 17,871 s contra limite de 30 s |
 | 8 | T04 completa | 2 | ✗ bloqueada — replicação parcial entregue |
 | 9 | Escala integral | 1 | 🔄 193.000 imagens em montagem |
 
@@ -213,10 +219,25 @@ evidência espectral de alta frequência de que T02 depende. As duas exigências
 são incompatíveis neste corpus, e isso é achado a discutir no Capítulo 4, não
 defeito a corrigir.
 
-**#7 — RNF01.** Medidas em CPU: T01 0,0645 s, T03 0,1537 s, T05 0,0002 s por
-imagem, somando 0,218 s contra o limite de 30 s. T02 depende da GPU, ocupada
-pelo treino multi-semente, e está enfileirada em
-`scripts/pipeline_pos_multiseed.py`.
+**#7 — RNF01. Fechada em 16/08/2026**, com as quatro técnicas medidas sobre
+1.000 imagens (T02 sobre 30, por custo):
+
+| Técnica | Dispositivo | n | Média | Desvio | Máximo | |
+|---|---|---|---|---|---|---|
+| T01 | CPU | 1.000 | 0,0384 s | 0,0036 s | 0,1032 s | ok |
+| T03 | CPU | 1.000 | 0,0787 s | 0,0092 s | 0,1852 s | ok |
+| T02 | GPU | 30 | 17,7539 s | 2,1706 s | 25,3035 s | ok |
+| T05 | CPU | 1.000 | 0,0001 s | 0,0003 s | 0,0091 s | ok |
+| **Soma** | | | **17,871 s** | | | **< 30 s** |
+
+Critério **atendido**, com folga de 12 s. T02 domina o custo — é 225 vezes mais
+cara que T03 —, mas mesmo assim cabe no orçamento. Resultado em
+`results/rnf01_tempos.json`.
+
+T04 não entra na soma: as medições acima antecedem a replicação parcial. Seu
+custo é conhecido pelas extrações — 0,206 s por imagem no SSISv2 e cerca de
+0,2 s no PerspectiveFields, ambos em GPU —, o que a manteria confortavelmente
+dentro do limite se fosse incluída.
 
 **Divergência interna do TCC 2 detectada.** O texto de RNF01 (Quadro 3) manda
 medir com "GPU para as técnicas T02 e T04 e CPU para T01, T03 e T05". A Seção
