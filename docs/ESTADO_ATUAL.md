@@ -45,15 +45,26 @@ Repositório: <https://github.com/elianferreira/tcc3-deteccao-imagens-ia> (priva
 
 ## Em execução (seguem sozinhos, sem a sessão)
 
-| Item | Mecanismo | Como acompanhar |
-|---|---|---|
-| RNF01 com T02 + OOD por famílias | tarefa `tcc3_pos_multiseed` | `logs/pos_multiseed.log` |
+| Item | Mecanismo | Recurso | Como acompanhar |
+|---|---|---|---|
+| OOD por famílias (RNF01 já concluído) | `tcc3_pos_multiseed` | GPU | `logs/pos_multiseed.log` |
+| Segmentos de reta de T04, teste e validação | `tcc3_t04_linhas` | CPU | `logs/t04_linhas.log` |
 
-Lançado em 16/08. Estimativa de 6 a 8 h, dominada pelo treino de T01 (~135 min)
-e pela inferência de T02 (~190 min, a 652 ms por imagem). **Não é retomável**:
-usa `--fit`, então recomeça do zero se morrer.
+Os dois correm em paralelo de propósito: a extração de retas roda em CPU, com a
+placa escondida por `CUDA_VISIBLE_DEVICES=""`, e por isso não disputa a GPU com
+o treino.
 
-Ocupa a GPU — T02 na interface falha enquanto isso durar (armadilha 4).
+O `pos_multiseed` **não é retomável** — usa `--fit`, então recomeça do zero se
+morrer. Estimativa de 6 a 8 h, dominada pelo treino de T01 e pela inferência de
+T02 (652 ms por imagem). Ocupa a GPU: T02 na interface falha enquanto durar
+(armadilha 4).
+
+### Fila, quando a GPU liberar
+
+1. `scripts/wsl/extrair_perspective_fields.py` sobre teste e validação (~1 h)
+2. `scripts/consolidar_escores_t04.py` — junta as três representações
+3. `scripts/avaliar_t04_componentes.py` — a tabela de T04 por representação
+4. `scripts/pipeline_t04_fusao.py` — T05 com T04 de três componentes
 
 ### Processos que morrem com a sessão
 
@@ -169,10 +180,22 @@ A semente 123 demorou mais por dividir CPU e disco com a montagem do corpus.
 |---|---|---|
 | # | Item | Observação |
 |---|---|---|
-| 1 | Campanha em escala | `scripts/pipeline_campanha.py --corpus data/corvi2024_escala --prefixo escala`; travada na decisão de sementes |
-| 2 | Extrator de `perspective_fields` | levaria T04 de 1/3 a 2/3; detectron2 já funciona no WSL2 |
-| 3 | Isolar corpus × origem das máscaras em T04 | exige o dataset Kandinsky dos autores; ver seção 4.8 de `RESULTADOS.md` |
-| 4 | Extrator de `line_segment` | o mais incerto: os autores não identificam o detector usado |
+| 1 | Rodar as três representações de T04 sobre o corpus | extratores prontos; falta a GPU liberar |
+| 2 | Isolar corpus × origem das máscaras em T04 | exige as imagens do Kandinsky; ver seção 4.8 de `RESULTADOS.md` |
+| 3 | Campanha em escala | **decidido não executar** — ver "Decisão tomada" abaixo |
+
+### Os três extratores de T04 estão de pé
+
+O bloqueio de T04 nunca foi dos classificadores, e sim dos extratores. Os três
+agora funcionam no WSL2:
+
+| Representação | Extrator | Estado |
+|---|---|---|
+| `object_shadow` | SSISv2 | extraído: 59.999 pares, 3 splits |
+| `perspective_fields` | PerspectiveFields (Jin et al., 2023) | pronto, testado |
+| `line_segment` | DeepLSD (Pautrat et al., 2023) | em extração |
+
+Os onze obstáculos vencidos estão em [`T04_AMBIENTE_WSL2.md`](T04_AMBIENTE_WSL2.md).
 
 ### Encerrados nesta sessão
 
