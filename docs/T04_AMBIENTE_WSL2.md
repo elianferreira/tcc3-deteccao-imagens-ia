@@ -2,7 +2,7 @@
 
 Registro completo do ambiente que permitiu executar o SSISv2, extrator de
 objeto-sombra de que T04 depende. Documentado passo a passo porque **nenhum dos
-oito obstáculos encontrados está descrito na documentação oficial** dos
+onze obstáculos encontrados está descrito na documentação oficial** dos
 projetos envolvidos, e refazer sem este registro custaria as mesmas horas.
 
 Situação anterior: T04 constava como bloqueada porque detectron2 não tem
@@ -33,7 +33,7 @@ já enxerga a placa, pois o driver vem do Windows.
 
 ---
 
-## Os oito obstáculos, na ordem em que aparecem
+## Os onze obstáculos, na ordem em que aparecem
 
 ### 1. `pip install -e .` do detectron2 falha com `No module named 'torch'`
 
@@ -122,8 +122,9 @@ assert hasattr(_C, "modulated_deform_conv_forward")
 
 ### 7. `postprocess` devolve `None`, e o `demo.py` oficial quebra nisso
 
-Os dois últimos obstáculos só aparecem ao rodar sobre corpus real, não sobre as
-amostras que os autores distribuem.
+Os obstáculos 7 e 8 são de outra natureza: não impedem montar o ambiente, e só
+aparecem ao rodar sobre corpus real, não sobre as amostras que os autores
+distribuem.
 
 Ausência de detecção chega por **duas** rotas. A esperada é um `Instances`
 vazio. A outra: `adet/modeling/ssis/condinst.py` inicializa
@@ -142,7 +143,7 @@ delas cada imagem caiu.
 
 ### 8. Defeito no pareamento do SSIS derruba a rodada inteira
 
-O mais caro dos oito, porque só se manifesta depois de horas de execução.
+O mais caro de todos, porque só se manifesta depois de horas de execução.
 
 `adet/modeling/ssis/condinst.py`, na rotina que casa objeto com sombra:
 
@@ -163,6 +164,80 @@ Correção adotada: capturar por imagem no extrator, registrar em
 `tcc3_30k_falhas_<split>_<carimbo>.csv` e seguir. A imagem fica sem mapas e não
 entra na avaliação — a exclusão é rara e auditável, o que é preferível a alterar
 o código oficial dos autores.
+
+---
+
+## Os outros dois extratores
+
+O ambiente montado para o SSISv2 sustentou os outros dois componentes de T04.
+Com eles, **as três representações passam a ter extrator funcionando**.
+
+### Campos de perspectiva — PerspectiveFields (Jin et al., 2023)
+
+```bash
+/root/geo/bin/pip install git+https://github.com/jinlinyi/PerspectiveFields.git
+```
+
+Sem obstáculo algum: o pip resolve tudo e o checkpoint (798 MB) baixa sozinho na
+primeira execução. A saída traz exatamente as duas chaves que
+`fields_dataset.py:31-35` consome, com as formas certas.
+
+### Segmentos de reta — DeepLSD (Pautrat et al., 2023)
+
+O artigo **nomeia** este detector, ao contrário do de campos de perspectiva.
+Três obstáculos, todos do mesmo gênero dos anteriores: código de terceiros
+antigo contra cadeia de ferramentas atual.
+
+### 9. `cmake_minimum_required` abaixo de 3.5
+
+O `pytlsd`, dependência C++ do DeepLSD, e o `pybind11` que ele empacota declaram
+mínimos de CMake que as versões atuais removeram. Configurar falha antes de
+compilar qualquer coisa.
+
+### 10. O `pybind11` empacotado não compila em Python 3.12
+
+Depois de resolver o 9, o compilador quebra em `cast.h`:
+
+```
+error: invalid use of incomplete type 'PyFrameObject' {aka 'struct _frame'}
+```
+
+O `pytlsd` traz `pybind11` **v2.6.2, de 2021**. `PyFrameObject` passou a ser tipo
+opaco no Python 3.11, e o código antigo acessa `frame->f_code` diretamente. É o
+mesmo problema do obstáculo 3, com outro projeto.
+
+Solução — atualizar o submódulo, que já resolve o obstáculo 9 junto:
+
+```bash
+cd /root/DeepLSD/third_party/pytlsd/pybind11
+git checkout -- . && git fetch --tags origin && git checkout v2.13.6
+cd .. && rm -rf build _skbuild && /root/geo/bin/pip install .
+```
+
+**Instalar sem dependências.** O `requirements.txt` do DeepLSD pede
+`kornia>=0.6`, e o `adet` exige `kornia==0.5.6` (obstáculo 2) — instalar as
+dependências destruiria o ambiente do SSIS. Não é preciso:
+`deeplsd_inference.py` importa apenas `numpy`, `torch` e `pytlsd`, e o
+`kornia 0.5.6` já tem as duas funções que o DeepLSD usaria no caminho completo.
+
+```bash
+/root/geo/bin/pip install --no-deps -e /root/DeepLSD
+```
+
+### 11. O PointNet oficial de T04 não roda em CPU se houver GPU
+
+`line_segment/lines_model.py:39-41` move a matriz identidade para CUDA quando
+CUDA está **disponível**, e não quando o modelo está na GPU:
+
+```python
+identity_matrix = torch.eye(self.output_dim)
+if torch.cuda.is_available():
+    identity_matrix = identity_matrix.cuda()
+```
+
+Numa máquina com placa, pedir CPU produz `Expected all tensors to be on the same
+device`. Irrelevante em produção, mas impede testar enquanto a GPU está ocupada.
+Contorno sem tocar no código dos autores: `CUDA_VISIBLE_DEVICES=""`.
 
 ---
 
