@@ -263,6 +263,79 @@ teste OOD — exatamente a fronteira entre as 750 imagens reais e o início do
 
 ---
 
+## 4b. Terceiro confundidor: perfis ICC embutidos
+
+Detectado durante a montagem do corpus em escala, ao investigar por que uma
+imagem havia ficado ilegível.
+
+### Como apareceu
+
+A verificação de integridade acusou dois arquivos corrompidos em 192.638. Um
+tinha 0 byte — escrita interrompida, tratada com gravação atômica. O outro,
+`coco_082449.png`, tinha 1.459.610 bytes contra os ~100 KB típicos e era
+reproduzível, portanto não era escrita parcial. A inspeção dos chunks revelou:
+
+```
+IHDR      13 bytes
+iCCP   1.367.158 bytes      <- perfil de cor ICC
+IDAT      92.371 bytes      <- a imagem em si
+```
+
+O JPEG de origem no COCO trazia um perfil ICC de 1,3 MB, que o Pillow copiou
+para o PNG. Ao reabrir, a proteção contra bomba de descompressão o rejeita com
+`Decompressed Data Too Large`.
+
+### A medição que importa
+
+| Grupo | Imagens com perfil ICC |
+|---|---|
+| **real/coco** | **51,0%** |
+| latent_diffusion | 0,0% |
+| glide | 0,0% |
+| dalle3 | 0,0% |
+| midjourney_v5 | 0,0% |
+
+Metade das imagens reais carrega um marcador que **nenhuma** sintética possui.
+Estruturalmente é o mesmo problema da resolução e do formato: um atributo que
+separa as classes sem relação alguma com síntese.
+
+### Por que os resultados **não** ficam invalidados
+
+Diferente do confundidor de resolução, este **não chega ao modelo**. Verificado
+empiricamente: carregou-se cada imagem com perfil, regravou-se sem ele e
+compararam-se os arrays de pixels.
+
+```
+5/5 imagens: pixels idênticos, diferença máxima 0
+```
+
+O Pillow não aplica o perfil ICC na decodificação, de modo que T01, T02 e T03
+recebem exatamente os mesmos dados com ou sem o chunk. **A rodada de 30k
+permanece válida** — o corpus dela apresenta a mesma proporção (45,3% contra
+0%), sem efeito sobre as métricas.
+
+### O que foi feito
+
+Todo metadado passou a ser descartado na gravação
+(`normalizada.info.pop("icc_profile", None)`), e as 90.000 imagens reais do
+corpus em escala foram regeradas. Motivo da correção, mesmo sem contaminar
+resultados:
+
+1. Um perfil de 1,3 MB tornou uma imagem irrecuperável.
+2. Higiene de corpus: outro carregador, ou uma análise futura, poderia explorar
+   o marcador sem que se percebesse.
+3. Espaço: perfis de mais de 1 MB em imagens de 100 KB.
+
+### Registro para o Capítulo 4
+
+É o **terceiro** confundidor encontrado neste corpus, depois de resolução e
+formato. Os dois primeiros invalidaram uma rodada inteira; este não. A diferença
+— um altera os pixels, o outro não — só pôde ser estabelecida por medição, não
+por inspeção do código, e é o tipo de verificação que a montagem de qualquer
+corpus forense deveria incluir.
+
+---
+
 ## 5. T04 não integrada — e replicação parcial do componente objeto-sombra
 
 Registro completo em [`external/CONTRATO.md`](../external/CONTRATO.md).
