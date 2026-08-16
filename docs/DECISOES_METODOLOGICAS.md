@@ -396,6 +396,42 @@ o repositório oficial intacto — a replicação segue auditável.
 A técnica reporta indisponibilidade na interface e as demais seguem operando
 (RN07).
 
+### Atualização: o bloqueio de objeto-sombra foi levantado
+
+O que estava bloqueado era o **extrator**, não o classificador. O SSISv2 foi
+posto para rodar em GPU no WSL2 — ambiente que a Seção 3.2 do TCC 2 já admite —
+e o registro completo, com os oito obstáculos vencidos, está em
+[`T04_AMBIENTE_WSL2.md`](T04_AMBIENTE_WSL2.md).
+
+Com isso, a limitação "não entra na tabela comparativa nem na fusão T05" deixa
+de valer para este componente. As máscaras do corpus deste trabalho foram
+extraídas e classificadas, e T04 passa a ocupar sua coluna em
+`src/techniques/t05_fusion.py`, antes sempre NaN.
+
+**Três ressalvas que precisam acompanhar o número onde ele aparecer:**
+
+1. **É um terço da técnica.** Campos de perspectiva e segmentos de reta seguem
+   sem extrator. `is_available()` passou a devolver disponibilidade *parcial*, e
+   a agregação por `nanmean` ignora as duas ausentes — o mesmo mecanismo de RN07.
+   Reporta-se como **T04 (objeto-sombra)**, nunca como T04.
+2. **É transferência entre domínios.** Os pesos são os oficiais, treinados em
+   Kandinsky e aplicados sem reajuste, como a Etapa 2 exige. Desempenho abaixo
+   do publicado não indica falha de replicação.
+3. **O resultado é negativo.** Sobre pares com conteúdo e com os pesos
+   `outdoor` — o recorte comparável ao da seção 4.7 — a AUC é 0,5797, contra
+   0,8216 do mesmo classificador sobre o corpus de origem. Em `combined` e
+   `indoor` fica em acaso. As verificações que descartam erro de mapeamento de
+   classes, falha do extrator e o confundidor das máscaras vazias estão na
+   seção 4.8 de [`RESULTADOS.md`](RESULTADOS.md), junto com o confundidor que
+   permanece aberto.
+
+   Na fusão, T05 se manteve em 0,9996 e atribuiu a T04 peso −0,0403: aprendeu a
+   ignorá-la. Ver seção 4.8.1.
+
+Nada disso altera o status de T04 como técnica completa: ela segue não
+replicada, e `external/CONTRATO.md` continua valendo para os outros dois
+componentes.
+
 ---
 
 ## 6. Ambiente de execução divergente

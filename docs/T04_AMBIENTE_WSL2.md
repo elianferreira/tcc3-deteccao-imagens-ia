@@ -2,7 +2,7 @@
 
 Registro completo do ambiente que permitiu executar o SSISv2, extrator de
 objeto-sombra de que T04 depende. Documentado passo a passo porque **nenhum dos
-seis obstáculos encontrados está descrito na documentação oficial** dos
+oito obstáculos encontrados está descrito na documentação oficial** dos
 projetos envolvidos, e refazer sem este registro custaria as mesmas horas.
 
 Situação anterior: T04 constava como bloqueada porque detectron2 não tem
@@ -33,7 +33,7 @@ já enxerga a placa, pois o driver vem do Windows.
 
 ---
 
-## Os seis obstáculos, na ordem em que aparecem
+## Os oito obstáculos, na ordem em que aparecem
 
 ### 1. `pip install -e .` do detectron2 falha com `No module named 'torch'`
 
@@ -120,6 +120,50 @@ from detectron2 import _C
 assert hasattr(_C, "modulated_deform_conv_forward")
 ```
 
+### 7. `postprocess` devolve `None`, e o `demo.py` oficial quebra nisso
+
+Os dois últimos obstáculos só aparecem ao rodar sobre corpus real, não sobre as
+amostras que os autores distribuem.
+
+Ausência de detecção chega por **duas** rotas. A esperada é um `Instances`
+vazio. A outra: `adet/modeling/ssis/condinst.py` inicializa
+`final_results = None` em `postprocess` e só o atribui dentro do ramo
+`if results.has("pred_global_masks")`. Quando nada sobrevive à filtragem, o
+dicionário devolvido traz `{"instances": None}`.
+
+O `demo.py` oficial faz `predictions["instances"].to(cpu)` sem verificar, e
+portanto lança `AttributeError` nessas imagens. Não aparece na documentação
+porque as amostras dos autores sempre têm alguma detecção; sobre o corpus deste
+trabalho, ocorreu já na primeira centena.
+
+As duas rotas significam a mesma coisa — nenhum objeto com sombra projetada — e
+o extrator as trata igual, com um par de mapas pretos, registrando em qual
+delas cada imagem caiu.
+
+### 8. Defeito no pareamento do SSIS derruba a rodada inteira
+
+O mais caro dos oito, porque só se manifesta depois de horas de execução.
+
+`adet/modeling/ssis/condinst.py`, na rotina que casa objeto com sombra:
+
+```python
+record.pop(record[ind])   # linha 321
+record.pop(ind)           # linha 322  -> KeyError
+```
+
+`record` guarda o pareamento nos dois sentidos (`record[ind] = i` e
+`record[i] = ind`). Quando as duas entradas coincidem, a primeira remoção já
+apaga a chave que a segunda tenta remover, e a inferência morre com
+`KeyError: np.int64(12)`.
+
+Frequência: **uma imagem em 42.000**. Bastou para perder 15.358 imagens de
+progresso no split de treino, porque a exceção sobe até o topo do laço.
+
+Correção adotada: capturar por imagem no extrator, registrar em
+`tcc3_30k_falhas_<split>_<carimbo>.csv` e seguir. A imagem fica sem mapas e não
+entra na avaliação — a exclusão é rara e auditável, o que é preferível a alterar
+o código oficial dos autores.
+
 ---
 
 ## Pesos e dados auxiliares
@@ -169,20 +213,41 @@ pred_masks:   (N, 256, 256) float32
 ```
 
 O classificador de T04 consome **duas** imagens em tons de cinza por amostra —
-uma de sombra, uma de objeto — conforme `object_shadow/dataset.py:20-21`. Falta
-escrever o agregador que reduz as N máscaras de instância a esses dois mapas
-binários.
+uma de sombra, uma de objeto — conforme `object_shadow/dataset.py:20-21`.
 
 ---
 
+## O agregador
+
+`scripts/wsl/extrair_object_shadow_ssis.py`, função `agregar_por_classe`.
+
+O formato de saída não foi arbitrado: as máscaras publicadas pelos autores
+(`Kandinsky_Outdoor_{shadow,object}`) foram medidas antes, porque o
+classificador foi treinado nelas. Amostra de 200 arquivos por classe:
+
+| Propriedade | Valor medido |
+|---|---|
+| Modo e tamanho | `L`, 256×256, uint8 |
+| Massa em [20, 235] | **exatamente 0** |
+| Formato em disco | JPEG |
+
+O intervalo vazio é o achado que decide o agregador: os mapas são estritamente
+binários, sem nível de cinza reservado a distinguir instâncias. Logo a redução
+das `N` máscaras é a **união binária** por classe — qualquer codificação mais
+rica divergiria do que o classificador viu no treino. Os valores 1–6 e 249–253
+que aparecem nos arquivos são artefato de JPEG, não sinal.
+
+Os mapas produzidos aqui foram conferidos contra esse mesmo critério e também
+têm massa zero em [20, 235]. A cobertura está em `tests/test_t04_agregador.py`,
+que roda no Windows sem detectron2 — o agregador é função pura sobre arrays.
+
 ## O que falta
 
-1. Escrever o agregador de máscaras por classe (`Object` / `Shadow`)
-2. Extrair sobre o corpus deste trabalho — ~0,17 s por imagem na GPU, cerca de
-   40 min para as 12.638 do benchmark
-3. Alimentar os classificadores oficiais, já validados em
-   `scripts/replicar_t04_object_shadow.py`
-4. Só então T04 entra na tabela comparativa e na fusão T05
+1. ~~Agregador de máscaras por classe~~ — feito
+2. Extração sobre o corpus, em andamento: 0,21 s por imagem, ~3,5 h para as
+   60.000 do manifesto padrão (`scripts/t04_extracao.bat`, retomável)
+3. Avaliação pelo classificador oficial — `scripts/avaliar_t04_corpus.py`
+4. T04 na tabela comparativa e como quarta fonte da fusão T05
 
 Os outros dois componentes de T04 — campos de perspectiva e segmentos de reta —
 seguem sem extrator. O caminho aberto aqui os torna plausíveis, não resolvidos.

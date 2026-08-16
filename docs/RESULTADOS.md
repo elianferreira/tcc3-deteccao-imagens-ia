@@ -437,6 +437,166 @@ tabela do artigo permanece pendente e deve ser feita na redação do Capítulo 4
 
 ---
 
+## 4.8 T04 sobre o corpus deste trabalho
+
+`scripts/avaliar_t04_corpus.py` · corpus de Corvi et al. (2024), split de teste
+padrão (9.000 imagens: 4.500 COCO reais, 4.500 latent diffusion).
+
+Diferente da seção 4.7 em um ponto decisivo: ali o classificador oficial roda
+sobre as máscaras que **os autores** publicaram, do corpus **deles**. Aqui as
+máscaras foram extraídas neste trabalho, com o SSISv2 rodando no WSL2
+(`docs/T04_AMBIENTE_WSL2.md`), sobre o corpus **deste trabalho**. É o que
+permite T04 entrar na comparação.
+
+Os pesos são os oficiais, aplicados sem reajuste, como a Etapa 2 exige. O
+resultado é, portanto, de transferência direta entre domínios.
+
+### O resultado
+
+Split de teste, 9.000 imagens, as três variantes de pesos oficiais:
+
+| Pesos | AUC | Acurácia | FPR |
+|---|---|---|---|
+| `combined` | 0,5384 | 0,4880 | 0,1627 |
+| `indoor` | 0,5468 | 0,4953 | 0,1560 |
+| `outdoor` | 0,4967 | 0,4637 | 0,5047 |
+
+Praticamente o acaso nas três. Antes de aceitar o número, três verificações.
+
+### Não é erro de mapeamento das classes
+
+Se objeto e sombra tivessem sido trocados no agregador, a razão entre as áreas
+sairia invertida:
+
+| | Razão área objeto / área sombra |
+|---|---|
+| Máscaras oficiais dos autores | 5,40 |
+| Extração deste trabalho | 6,72 |
+
+Mesma direção e mesma ordem de grandeza. As classes estão corretas.
+
+### Não é falha do extrator
+
+A taxa de pares vazios — imagens em que o SSISv2 não detecta objeto com sombra
+projetada — é o indicador mais direto de que o extrator está operando como o dos
+autores:
+
+| | Pares vazios (global) |
+|---|---|
+| Corpus dos autores | 36,2% |
+| Extração deste trabalho | 39,1% |
+
+Somado ao formato idêntico (binário, 256×256, massa nula em [20, 235]), o
+extrator está detectando na mesma proporção.
+
+### Não é o confundidor das máscaras vazias
+
+A taxa de pares vazios difere entre as classes, o que levantaria a mesma
+suspeita de atalho da seção 4.7 — mas com **polaridade invertida**:
+
+| Corpus | Reais vazias | Sintéticas vazias | Direção |
+|---|---|---|---|
+| Kandinsky (autores) | 44,3% | 28,2% | vazio → real |
+| Corvi (este trabalho) | 31,6% | 46,5% | vazio → sintética |
+
+O atalho disponível no treino aponta para o lado oposto do que valeria aqui: um
+classificador que tenha aprendido "máscara vazia → real" rotula sistematicamente
+as sintéticas deste corpus como reais. Isso explica por que o desempenho fica
+*em* acaso em vez de apenas cair.
+
+O efeito do confundidor, porém, **depende da variante de pesos**, e a diferença
+é grande o bastante para exigir cuidado ao citar um número. Restringindo às
+5.484 imagens em que o extrator produziu representação:
+
+| Pesos | AUC (todas) | AUC (só com conteúdo) | Variação |
+|---|---|---|---|
+| `combined` | 0,5384 | 0,5220 | −1,6 p.p. |
+| `indoor` | 0,5468 | 0,5262 | −2,1 p.p. |
+| **`outdoor`** | 0,4967 | **0,5797** | **+8,3 p.p.** |
+
+Em `outdoor` as máscaras vazias **rebaixam** a AUC, como na seção 4.7 — e é
+coerente: essa variante atribui escore alto de forma ampla (FPR 0,5047), de modo
+que os pares vazios, sem informação, entram como ruído puro. Em `combined` e
+`indoor` o efeito é o oposto e pequeno.
+
+O valor estável em `outdoor` sobre pares com conteúdo se repete nos três splits:
+0,5797 (teste), 0,5763 (treino), 0,5912 (validação).
+
+### Leitura
+
+**A comparação correta é com `outdoor`.** É a variante que a seção 4.7 usou para
+confrontar o valor publicado, e o recorte comparável é o de pares com conteúdo
+nos dois casos:
+
+| | Pesos | Máscaras | Corpus | AUC (pares com conteúdo) |
+|---|---|---|---|---|
+| Seção 4.7 | `outdoor` | dos autores | Kandinsky | **0,8216** |
+| Seção 4.8 | `outdoor` | extraídas aqui | Corvi et al. | **0,5797** |
+
+Queda de 24 pontos. O componente objeto-sombra de T04 **não transfere** do
+corpus dos autores para o de Corvi et al. (2024). O resultado em `outdoor` fica
+acima do acaso — 0,58 não é 0,50 — mas muito longe do publicado, e as outras
+duas variantes ficam em acaso.
+
+É um resultado negativo, e informativo: sustenta que o desempenho geométrico
+publicado depende do domínio em que foi medido — cenas Kandinsky, sintetizadas
+com objetos e sombras salientes — e não se sustenta sobre um corpus de detecção
+forense montado com outro critério.
+
+**Confundidor que permanece aberto.** A comparação 0,8216 × 0,5797 muda duas
+coisas ao mesmo tempo: o corpus e a origem das máscaras. Isolá-las exige rodar o
+extrator deste trabalho sobre as imagens do Kandinsky e comparar com 0,8216 — o
+repositório oficial distribui apenas as máscaras, não as imagens de origem, de
+modo que o teste depende de baixar o dataset dos autores. Os três indícios acima
+apontam para o corpus como causa, mas não substituem esse teste.
+
+### 4.8.1 T04 como quarta fonte de T05
+
+`scripts/pipeline_t04_fusao.py` · protocolo padrão, fusão reajustada sobre `val`.
+
+Com os escores de T04 disponíveis, a coluna que sempre recebeu NaN em
+`src/techniques/t05_fusion.py` passou a ser preenchida, e T05 foi reajustada
+sobre as **quatro** fontes. Nada foi retreinado: T01 e T03 vieram dos pesos já
+ajustados e os escores de T01–T03 do cache em `results/scores/`.
+
+A pergunta não era se T04 melhora a fusão — uma fonte em acaso não tem como —,
+e sim se a **degrada**. Uma entrada sem sinal pode prejudicar a decisão caso o
+classificador de fusão lhe atribua peso.
+
+| Técnica | AUC | Acurácia |
+|---|---|---|
+| T01 | 0,9962 | 0,9722 |
+| T02 | 0,9976 | 0,9724 |
+| T03 | 0,8064 | 0,7326 |
+| T04 (objeto-sombra) | 0,5384 | 0,4880 |
+| **T05, quatro fontes** | **0,9996** | 0,9891 |
+
+**T05 permanece em 0,9996** — idêntica ao valor com três fontes. E o peso que a
+regressão logística atribui a cada domínio explica por quê:
+
+| Fonte | Peso |
+|---|---|
+| T02 (espectral) | +4,2525 |
+| T01 (espacial) | +3,4061 |
+| T03 (estatístico) | +0,5063 |
+| **T04 (geométrico)** | **−0,0403** |
+
+A fusão aprendeu a **ignorar** T04: peso praticamente nulo, duas ordens de
+grandeza abaixo de T01 e T02. É o comportamento desejável e não estava
+garantido — o classificador poderia ter se apoiado em ruído e perdido
+desempenho.
+
+Isso reforça, por evidência direta, a premissa de RN07 e RNF04: a arquitetura
+tolera uma fonte inútil sem degradar a decisão. Até aqui essa tolerância havia
+sido verificada apenas por desativação simulada de módulos nos testes de falha
+controlada; agora foi medida com uma fonte real que de fato não carrega sinal.
+
+O modelo de quatro fontes está em `weights/t05_fusion__quatro_fontes.pkl`.
+`weights/t05_fusion.pkl` segue sendo o de três fontes, que é o que a interface
+carrega.
+
+---
+
 ## 5. Protocolo de robustez
 
 1.000 imagens in-distribution sob nove degradações.

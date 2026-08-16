@@ -47,45 +47,64 @@ Repositório: <https://github.com/elianferreira/tcc3-deteccao-imagens-ia> (priva
 
 ## Em execução (seguem sozinhos, sem a sessão)
 
-| Item | Mecanismo | Como acompanhar |
-|---|---|---|
-| RNF01 com T02 + OOD por famílias | tarefa `tcc3_pos_multiseed` | `logs/pos_multiseed.log` |
-| Regeneração das reais sem perfil ICC | processo destacado | `logs/corpus_reparo_icc.log` |
+**Nada em execução.** A GPU está livre.
 
-Ambos são retomáveis e não precisam de supervisão. Para interrompê-los:
+O próximo item da fila é `tcc3_pos_multiseed`, que parou em 15/08 e precisa ser
+relançado do zero (RNF01 com T02 e o protocolo OOD por famílias):
 
 ```powershell
-schtasks /end /tn "tcc3_pos_multiseed"
-Get-Content logs\corpus_reparo_icc.pid | ForEach-Object { taskkill /PID $_ /T /F }
+schtasks /run /tn "tcc3_pos_multiseed"
 ```
 
-Para retomar a regeneração do corpus depois:
+### Processos que morrem com a sessão
+
+Em 15/08 à noite, `tcc3_pos_multiseed` e a regeneração do corpus pararam juntos
+por volta das 23h55, sem traceback e com log de erro vazio. As tarefas do
+Agendador estão registradas como **"Interativo apenas"**, de modo que terminam
+junto com a sessão que as criou — o Agendador protege contra o fechamento do
+shell, não contra o fim da sessão.
+
+Ao retomar, sempre conferir o que de fato está vivo antes de assumir progresso:
 
 ```powershell
-python scripts\lancar_destacado.py --log logs\corpus_reparo_icc.log `
-  --err logs\corpus_reparo_icc.err --anexar -- `
-  .venv\Scripts\python.exe -u scripts\preparar_corpus_escala.py `
-  --n-real 90000 --n-sintetica 90000
+schtasks /query /tn "tcc3_t04_extracao" /fo list     # "Em execução" ou "Pronto"
+Get-Process python | Select-Object Id,StartTime
 ```
 
 ## PONTO DE RETOMADA — onde o trabalho parou
 
-O último item em andamento manual era o **extrator de T04 no WSL2**.
+**A cadeia de T04 está fechada.** O que era o ponto de retomada anterior — o
+agregador de máscaras — foi escrito, validado e executado ponta a ponta:
 
-Estado: o SSISv2 **já roda na GPU** e produz máscaras corretamente. O ambiente
-completo está descrito em [`T04_AMBIENTE_WSL2.md`](T04_AMBIENTE_WSL2.md),
-inclusive os seis obstáculos vencidos, que não estão documentados em lugar
-nenhum.
+1. Agregador em `scripts/wsl/extrair_object_shadow_ssis.py`. O formato foi
+   derivado de medição das máscaras oficiais, não arbitrado; ver
+   [`T04_AMBIENTE_WSL2.md`](T04_AMBIENTE_WSL2.md), seção "O agregador".
+   Coberto por `tests/test_t04_agregador.py`.
+2. Extração sobre o corpus padrão: 59.999 pares nos três splits, **uma** falha
+   (o defeito de pareamento do SSIS, obstáculo 8).
+3. Avaliação com as três variantes de pesos oficiais —
+   `scripts/avaliar_t04_corpus.py`.
+4. T04 na tabela comparativa e como quarta fonte de T05 —
+   `scripts/pipeline_t04_fusao.py`.
 
-O que falta, em ordem:
+**O resultado é negativo, e essa é a contribuição.** T04 (objeto-sombra) fica em
+acaso sobre este corpus: 0,5797 no melhor recorte (`outdoor`, pares com
+conteúdo), contra 0,8216 do mesmo classificador no corpus de origem. Na fusão,
+T05 permaneceu em 0,9996 e atribuiu a T04 peso −0,0403 — aprendeu a ignorá-la,
+o que confirma por medição a tolerância prevista em RN07/RNF04.
 
-1. Escrever o agregador que reduz as `N` máscaras de instância a dois mapas
-   binários — um de `Object`, um de `Shadow` — no formato de
-   `object_shadow/dataset.py:20-21`
-2. Rodar sobre o corpus (~0,17 s por imagem; ~40 min para as 12.638 do benchmark)
-3. Alimentar os classificadores oficiais com
-   `scripts/replicar_t04_object_shadow.py`, já validado
-4. T04 então entra na tabela comparativa e na fusão T05 (quatro fontes, não três)
+Detalhes e as verificações que descartam erro de mapeamento de classes, falha do
+extrator e o confundidor das máscaras vazias: seções 4.8 e 4.8.1 de
+[`RESULTADOS.md`](RESULTADOS.md).
+
+Ressalvas que precisam acompanhar o número no texto: é **um** dos três
+componentes de T04, deve ser reportado como "T04 (objeto-sombra)", e é
+transferência entre domínios sem reajuste, como a Etapa 2 exige.
+
+### Próximo passo sugerido
+
+Relançar `tcc3_pos_multiseed` (RNF01 com T02 + OOD por famílias), que a GPU
+agora comporta. Depois, decidir a campanha em escala — ver "Decisão em aberto".
 
 Verificação rápida de que o ambiente do WSL continua de pé:
 
@@ -109,6 +128,10 @@ Deve imprimir `True`. Se imprimir erro, refazer pelo `T04_AMBIENTE_WSL2.md`.
 - Três confundidores investigados: resolução, formato e perfil ICC
 - **Multi-semente de T01 (Etapa 4)** — AUC 0,9964 ± 0,0002
 - **Extratores de T04 desbloqueados no WSL2** — SSISv2 rodando na GPU
+- **Corpus em escala regenerado sem perfil ICC** — 192.638 imagens conferidas
+- **Manifestos da escala** — os três (padrão, OOD, OOD por famílias)
+- **Cadeia de T04 fechada** — agregador, extração de 59.999 pares, avaliação
+  com as três variantes de pesos e integração como quarta fonte de T05
 
 ### Resultados principais já obtidos
 
@@ -119,7 +142,11 @@ Protocolo padrão, corpus de 30k:
 | T01 | 0,9962 | 0,0233 |
 | T02 | 0,9976 | 0,0504 |
 | T03 | 0,8064 | 0,2371 |
+| T04 (objeto-sombra) | 0,5384 | 0,1627 |
 | T05 | 0,9996 | 0,0042 |
+
+T04 entrou na tabela nesta sessão. Peso que T05 lhe atribui: −0,0403, contra
++4,25 de T02 e +3,41 de T01 — a fusão a ignora, e sua AUC não muda.
 
 Protocolo OOD: colapso de 17 a 26 p.p., persistente com 60.000 imagens de
 treino. Detalhes e testes de significância em `docs/RESULTADOS.md`.
@@ -141,11 +168,12 @@ A semente 123 demorou mais por dividir CPU e disco com a montagem do corpus.
 
 | # | Item | Observação |
 |---|---|---|
-| 1 | Manifestos OOD e OOD-famílias da escala | só o padrão foi gerado |
-| 2 | Campanha em escala | `scripts/pipeline_campanha.py --corpus data/corvi2024_escala --prefixo escala`; ~4 dias com três sementes |
-| 3 | Verificar T02 contra a AUC publicada | Etapa 3, tolerância de 5 p.p. |
-| 4 | Conferir T04 contra a **tabela** do artigo | os valores usados vieram da figura |
-| 5 | T04 completa | bloqueada em definitivo; ver `external/CONTRATO.md` |
+| 1 | RNF01 com T02 + OOD por famílias | `tcc3_pos_multiseed`; GPU livre, pode ser relançado |
+| 2 | Isolar corpus × origem das máscaras em T04 | exige o dataset Kandinsky dos autores; ver seção 4.8 de `RESULTADOS.md` |
+| 3 | Campanha em escala | `scripts/pipeline_campanha.py --corpus data/corvi2024_escala --prefixo escala`; ~4 dias com três sementes |
+| 4 | Verificar T02 contra a AUC publicada | Etapa 3, tolerância de 5 p.p. |
+| 5 | Conferir T04 contra a **tabela** do artigo | os valores usados vieram da figura |
+| 6 | T04 completa | perspectiva e segmentos de reta seguem sem extrator; ver `external/CONTRATO.md` |
 
 ---
 
@@ -167,13 +195,18 @@ Registradas porque cada uma já custou tempo nesta execução.
 
 1. **Compile antes de rodada longa.** Um `SyntaxError` custou 12 h de janela.
    `python -m compileall scripts src app tests`.
-2. **Processos lançados pelo shell morrem.** Ocorreu três vezes, inclusive com
-   `DETACHED_PROCESS`, sempre sem traceback e com log de erro vazio. Use o
-   Agendador (`scripts/multiseed.bat` como modelo) para execuções longas.
+2. **Processos longos morrem sem traceback.** Ocorreu cinco vezes, sempre com
+   log de erro vazio. O Agendador (`scripts/multiseed.bat` como modelo) protege
+   contra o fechamento do shell, mas **não** contra o fim da sessão: as tarefas
+   estão em modo "Interativo apenas" e caíram junto com ela em 15/08, às 23h55.
+   Ao retomar, verificar o que está vivo antes de supor progresso — o log para
+   no meio, sem qualquer marca de erro.
 3. **Não sobrescrever os pesos do protocolo padrão.** Treinos de outras
    variantes devem usar `TCC3_WEIGHTS_DIR`, como faz
    `scripts/pipeline_pos_multiseed.py`.
 4. **T02 exige GPU livre.** Falha se houver treinamento em curso; não é defeito.
+   A extração de T04 no WSL2 também ocupa a GPU — os dois não convivem na
+   RTX 3060 de 6 GB.
 5. **`wmic` não existe** nesta build do Windows 11; e a ferramenta PowerShell
    ficou indisponível durante a sessão. Bash funciona.
 6. **A interface não é afetada** pelos treinos: `run_multi_seed` grava em
