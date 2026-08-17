@@ -575,6 +575,15 @@ apontam para o corpus como causa, mas não substituem esse teste.
 
 `scripts/pipeline_t04_fusao.py` · protocolo padrão, fusão reajustada sobre `val`.
 
+> ⚠️ **Medição provisória.** Os números desta seção foram obtidos quando T04
+> consistia apenas do componente objeto-sombra — um terço da técnica. Com as
+> três representações extraídas, a coluna de T04 muda, e a fusão precisa ser
+> reajustada e remedida. A seção 4.12 traz o resultado definitivo.
+>
+> A distinção importa: a **arquitetura** de T05 não depende disso — ela sempre
+> teve as quatro entradas e o tratamento de fonte ausente (RN07/RNF04), que é o
+> que lhe permite operar sem T04. O que depende é o **valor medido**.
+
 Com os escores de T04 disponíveis, a coluna que sempre recebeu NaN em
 `src/techniques/t05_fusion.py` passou a ser preenchida, e T05 foi reajustada
 sobre as **quatro** fontes. Nada foi retreinado: T01 e T03 vieram dos pesos já
