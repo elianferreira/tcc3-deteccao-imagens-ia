@@ -13,8 +13,22 @@ Basta apontar para este repositório e pedir a continuação. Um resumo do que
 dizer:
 
 > Estou continuando meu TCC 3 em `C:\Users\ferre\projects\tcc3-deteccao-imagens-ia`.
-> Leia `docs/ESTADO_ATUAL.md`, `docs/AUDITORIA_TCC2_TCC3.md` e
-> `docs/RESULTADOS.md` para se situar, e continue de onde parou.
+> Leia `docs/ESTADO_ATUAL.md` e continue do ponto de retomada. **Antes de supor
+> qualquer progresso, confira o que ainda está vivo** — duas execuções longas
+> podem ter morrido junto com a sessão anterior.
+
+O primeiro comando de qualquer sessão nova deve ser este, porque o log de uma
+execução morta para no meio sem marca de erro:
+
+```powershell
+schtasks /query /tn "tcc3_pos_multiseed" /fo list | Select-String "Status"
+schtasks /query /tn "tcc3_t04_campos_test" /fo list | Select-String "Status"
+Get-Content logs\pos_multiseed.log -Tail 3
+Get-Content logs\t04_campos.log -Tail 3
+```
+
+"Em execução" significa vivo; "Pronto" significa terminado **ou morto** — e a
+diferença só aparece no log.
 
 O TCC 2 (documento de projeto) está em
 `C:\Users\ferre\Downloads\TCC_2_Elian_Ferreira.pdf`.
@@ -45,26 +59,52 @@ Repositório: <https://github.com/elianferreira/tcc3-deteccao-imagens-ia> (priva
 
 ## Em execução (seguem sozinhos, sem a sessão)
 
-| Item | Mecanismo | Recurso | Como acompanhar |
+Situação em 17/08/2026, 07:12.
+
+| Item | Tarefa | Recurso | Log |
 |---|---|---|---|
-| OOD por famílias (RNF01 já concluído) | `tcc3_pos_multiseed` | GPU | `logs/pos_multiseed.log` |
-| Segmentos de reta de T04, teste e validação | `tcc3_t04_linhas` | CPU | `logs/t04_linhas.log` |
+| Protocolo OOD por famílias, fase de inferência | `tcc3_pos_multiseed` | GPU | `logs/pos_multiseed.log` |
+| Campos de perspectiva de T04, split de teste | `tcc3_t04_campos_test` | CPU | `logs/t04_campos.log` |
 
-Os dois correm em paralelo de propósito: a extração de retas roda em CPU, com a
-placa escondida por `CUDA_VISIBLE_DEVICES=""`, e por isso não disputa a GPU com
-o treino.
+Correm em paralelo de propósito: um em GPU, outro em CPU.
 
-O `pos_multiseed` **não é retomável** — usa `--fit`, então recomeça do zero se
-morrer. Estimativa de 6 a 8 h, dominada pelo treino de T01 e pela inferência de
-T02 (652 ms por imagem). Ocupa a GPU: T02 na interface falha enquanto durar
-(armadilha 4).
+### ⚠️ Se estes dois morrerem, como retomar
 
-### Fila, quando a GPU liberar
+Em 15/08 duas execuções longas pararam juntas às 23h55, sem traceback e com log
+de erro vazio. A causa exata **não foi determinada** — as tarefas estão como
+"Interativo apenas", o que as encerraria junto com a sessão, mas suspensão da
+máquina ou logoff explicam igualmente bem. Fica o fato empírico, não o mecanismo.
 
-1. `scripts/wsl/extrair_perspective_fields.py` sobre teste e validação (~1 h)
-2. `scripts/consolidar_escores_t04.py` — junta as três representações
-3. `scripts/avaliar_t04_componentes.py` — a tabela de T04 por representação
-4. `scripts/pipeline_t04_fusao.py` — T05 com T04 de três componentes
+**`tcc3_pos_multiseed`** — o treino já terminou e os modelos estão salvos em
+`weights_ood_familias/` (T01, T03 e T05). Relançar a tarefa **retreinaria tudo
+de novo**, porque o pipeline usa `--fit`. Para retomar só a inferência, que é o
+que falta:
+
+```powershell
+$env:TCC3_WEIGHTS_DIR = "C:\Users\ferre\projects\tcc3-deteccao-imagens-ia\weights_ood_familias"
+.venv\Scripts\python.exe -u scripts\run_experiments.py --protocol ood `
+  --manifest data\manifesto30k_ood_familias.csv `
+  --techniques T01 T02 T03 T05 --refit-fusion
+```
+
+Sem `--fit`, ele carrega os modelos já ajustados. Escores de T01/T03 vêm do
+cache em `results/scores/`; T02 será recalculada (~190 min, é o grosso do custo).
+
+**`tcc3_t04_campos_test`** — não é retomável no meio: grava o CSV só no fim.
+Se morrer, relançar do zero, ~3 h:
+
+```powershell
+schtasks /run /tn "tcc3_t04_campos_test"
+```
+
+### Fila depois destes dois
+
+1. `python scripts/consolidar_escores_t04.py` — junta as três representações em
+   `results/t04_escores_componentes.csv`
+2. `python scripts/avaliar_t04_componentes.py --split test` — a tabela de T04
+   por representação e agregada
+3. `python scripts/pipeline_t04_fusao.py` — T05 com T04 **completa**, que é a
+   medição definitiva; a atual é provisória (ver 4.8.1 de `RESULTADOS.md`)
 
 ### Processos que morrem com a sessão
 
@@ -80,6 +120,30 @@ Ao retomar, sempre conferir o que de fato está vivo antes de assumir progresso:
 schtasks /query /tn "tcc3_t04_extracao" /fo list     # "Em execução" ou "Pronto"
 Get-Process python | Select-Object Id,StartTime
 ```
+
+## O que falta para o trabalho fechar
+
+Em uma frase: **falta medir T05 com T04 completa.** Todo o resto está feito.
+
+| # | Item | Estado |
+|---|---|---|
+| 1 | Campos de perspectiva no split de teste | rodando, ~3 h |
+| 2 | Consolidar as três representações de T04 | script pronto, 1 comando |
+| 3 | Tabela de T04 por representação | script pronto, 1 comando |
+| 4 | **T05 com as quatro fontes completas** | **é o resultado que falta** |
+| 5 | Protocolo OOD por famílias | rodando, fase de inferência |
+
+O item 4 é o que responde à pergunta central da proposta. A medição atual de T05
+(AUC 0,9996, peso −0,0403 para T04) é **provisória**: foi obtida quando T04
+consistia apenas do componente objeto-sombra, um terço da técnica.
+
+Previsão, a ser confirmada e não assumida: como as três representações medem
+~0,53, a média deve ficar ~0,53 e T05 deve permanecer em 0,9996 com T04 perto de
+peso zero. Mas há um caso em que isso falharia — se as três erram de formas
+**diferentes**, a média pode ser menos ruidosa que cada uma isolada, e T04
+receberia peso não desprezível. Isso seria resultado interessante por si só.
+
+---
 
 ## PONTO DE RETOMADA — onde o trabalho parou
 
