@@ -14,21 +14,25 @@ dizer:
 
 > Estou continuando meu TCC 3 em `C:\Users\ferre\projects\tcc3-deteccao-imagens-ia`.
 > Leia `docs/ESTADO_ATUAL.md` e continue do ponto de retomada. **Antes de supor
-> qualquer progresso, confira o que ainda está vivo** — duas execuções longas
-> podem ter morrido junto com a sessão anterior.
+> qualquer progresso, confira o que ainda está vivo.**
 
-O primeiro comando de qualquer sessão nova deve ser este, porque o log de uma
-execução morta para no meio sem marca de erro:
+**Situação em 17/08/2026: nada está rodando.** Os dois processos longos foram
+parados de propósito, para liberar a máquina. A primeira ação de uma sessão nova
+é **relançá-los** — os dois comandos estão na seção
+[Como retomar](#️-como-retomar--os-dois-comandos-nesta-ordem).
+
+Antes disso, confirme o estado, porque o log de uma execução interrompida para no
+meio sem marca de erro:
 
 ```powershell
-schtasks /query /tn "tcc3_pos_multiseed" /fo list | Select-String "Status"
 schtasks /query /tn "tcc3_t04_campos_test" /fo list | Select-String "Status"
-Get-Content logs\pos_multiseed.log -Tail 3
 Get-Content logs\t04_campos.log -Tail 3
+Get-Content logs\pos_multiseed.log -Tail 3
+Get-Process python | Select-Object Id,StartTime
 ```
 
-"Em execução" significa vivo; "Pronto" significa terminado **ou morto** — e a
-diferença só aparece no log.
+"Em execução" significa vivo; "Pronto" significa terminado **ou parado** — e a
+diferença só aparece no log e nos arquivos de saída.
 
 O TCC 2 (documento de projeto) está em
 `C:\Users\ferre\Downloads\TCC_2_Elian_Ferreira.pdf`.
@@ -59,26 +63,29 @@ Repositório: <https://github.com/elianferreira/tcc3-deteccao-imagens-ia> (priva
 
 ## Em execução (seguem sozinhos, sem a sessão)
 
-Situação em 17/08/2026, 07:12.
+**Nada em execução.** Os dois processos foram **parados de propósito** em
+17/08/2026, 07:20, para liberar a máquina. A GPU está livre (660 MB).
 
-| Item | Tarefa | Recurso | Log |
-|---|---|---|---|
-| Protocolo OOD por famílias, fase de inferência | `tcc3_pos_multiseed` | GPU | `logs/pos_multiseed.log` |
-| Campos de perspectiva de T04, split de teste | `tcc3_t04_campos_test` | CPU | `logs/t04_campos.log` |
+## ▶️ COMO RETOMAR — os dois comandos, nesta ordem
 
-Correm em paralelo de propósito: um em GPU, outro em CPU.
+Retomar significa continuar de onde parou, e não recomeçar. O que já foi
+computado está preservado; os comandos abaixo aproveitam isso.
 
-### ⚠️ Se estes dois morrerem, como retomar
+### 1. Campos de perspectiva, split de teste (CPU, ~3 h)
 
-Em 15/08 duas execuções longas pararam juntas às 23h55, sem traceback e com log
-de erro vazio. A causa exata **não foi determinada** — as tarefas estão como
-"Interativo apenas", o que as encerraria junto com a sessão, mas suspensão da
-máquina ou logoff explicam igualmente bem. Fica o fato empírico, não o mecanismo.
+```powershell
+schtasks /run /tn "tcc3_t04_campos_test"
+```
 
-**`tcc3_pos_multiseed`** — o treino já terminou e os modelos estão salvos em
-`weights_ood_familias/` (T01, T03 e T05). Relançar a tarefa **retreinaria tudo
-de novo**, porque o pipeline usa `--fit`. Para retomar só a inferência, que é o
-que falta:
+O extrator agora é **retomável por checkpoint**: grava o CSV a cada 250 imagens
+e, ao reiniciar, pula o que já está lá. As 1.250 imagens processadas antes da
+parada foram perdidas porque a gravação era só no fim — defeito corrigido, não
+se repete.
+
+### 2. Protocolo OOD por famílias (GPU, ~90 min)
+
+**Não** relançar `tcc3_pos_multiseed`: o pipeline usa `--fit` e retreinaria tudo.
+O treino **já terminou** e os modelos estão em `weights_ood_familias/`. Use:
 
 ```powershell
 $env:TCC3_WEIGHTS_DIR = "C:\Users\ferre\projects\tcc3-deteccao-imagens-ia\weights_ood_familias"
@@ -87,17 +94,24 @@ $env:TCC3_WEIGHTS_DIR = "C:\Users\ferre\projects\tcc3-deteccao-imagens-ia\weight
   --techniques T01 T02 T03 T05 --refit-fusion
 ```
 
-Sem `--fit`, ele carrega os modelos já ajustados. Escores de T01/T03 vêm do
-cache em `results/scores/`; T02 será recalculada (~190 min, é o grosso do custo).
+O que já está no cache (`results/scores/`) e será reaproveitado:
 
-**`tcc3_t04_campos_test`** — não é retomável no meio: grava o CSV só no fim.
-Se morrer, relançar do zero, ~3 h:
+| Escore | Estado |
+|---|---|
+| T01, T02, T03 sobre `val` | ✅ prontos — inclui T02, que é o item caro |
+| T01 sobre teste | ✅ pronto |
+| T02, T03 sobre teste | ❌ recalcular (~80 min, quase todo de T02) |
 
-```powershell
-schtasks /run /tn "tcc3_t04_campos_test"
-```
+Por isso ~90 min, e não os ~190 min de uma execução limpa.
 
-### Fila depois destes dois
+**Atenção ao cache.** A chave é `{protocolo}__{técnica}__{condição}__{split}`, e
+o protocolo é `ood` tanto para `manifesto30k_ood.csv` quanto para
+`manifesto30k_ood_familias.csv` — os dois compartilham espaço de nomes. Não
+causa erro porque as partições têm tamanhos diferentes e a guarda de forma em
+`runner.py:119` rejeita o incompatível, mas a execução **sobrescreve** o cache
+do OOD regular, que terá de ser recalculado se aquele protocolo for refeito.
+
+### 3. Fila depois destes dois
 
 1. `python scripts/consolidar_escores_t04.py` — junta as três representações em
    `results/t04_escores_componentes.csv`

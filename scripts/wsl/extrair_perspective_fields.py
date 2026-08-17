@@ -135,6 +135,23 @@ def carregar_classificador(pesos: Path, dispositivo):
     return modelo
 
 
+def gravar_bloco(destino: Path, linhas: list[dict]) -> None:
+    """Acrescenta um bloco de resultados ao CSV, criando o cabecalho se preciso.
+
+    A gravacao e incremental para que a execucao seja retomavel. Sem isso, uma
+    interrupcao no meio custa tudo que foi processado -- o que custou 1.250
+    imagens quando a maquina precisou ser liberada.
+    """
+    if not linhas:
+        return
+    novo = not destino.exists()
+    with open(destino, "a", newline="", encoding="utf-8") as arquivo:
+        escritor = csv.DictWriter(arquivo, fieldnames=list(linhas[0].keys()))
+        if novo:
+            escritor.writeheader()
+        escritor.writerows(linhas)
+
+
 def ler_entradas(manifesto: Path, split: str | None, limite: int) -> list[dict]:
     entradas: list[dict] = []
     with open(manifesto, newline="", encoding="utf-8") as arquivo:
@@ -190,10 +207,18 @@ def main() -> int:
     destino_csv = (args.saida /
                    f"{args.conjunto}_pf_{args.variante}{sufixo}.csv")
 
+    # Retomada por checkpoint. O CSV e gravado em blocos, e nao so no fim: uma
+    # interrupcao a 1.250 de 9.000 imagens custava as 1.250 inteiras, o que
+    # aconteceu de fato ao liberar a maquina no meio de uma execucao.
+    ja_feitas: set[str] = set()
     if destino_csv.exists():
-        print(f"[retomada] {destino_csv.name} ja existe; nada a fazer")
-        print("           remova o arquivo para reprocessar")
-        return 0
+        with open(destino_csv, newline="", encoding="utf-8") as arquivo:
+            ja_feitas = {linha["arquivo"] for linha in csv.DictReader(arquivo)}
+        if len(ja_feitas) >= len(entradas):
+            print(f"[retomada] {destino_csv.name} completo ({len(ja_feitas)} imagens)")
+            return 0
+        print(f"[retomada] {len(ja_feitas)} imagens ja processadas; continuando\n")
+        entradas = [e for e in entradas if e["nome"] not in ja_feitas]
 
     print("=" * 72)
     print("T04 - CAMPOS DE PERSPECTIVA (extracao + classificacao)")
@@ -259,6 +284,7 @@ def main() -> int:
         })
 
         if len(registro) % 250 == 0:
+            gravar_bloco(destino_csv, registro[-250:])
             decorrido = time.perf_counter() - inicio
             taxa = decorrido / len(registro)
             restantes = len(entradas) - indice
@@ -273,17 +299,21 @@ def main() -> int:
         print(f"Tempo ........... {decorrido / 60:.1f} min "
               f"({decorrido / len(registro):.3f} s/img)")
 
-        with open(destino_csv, "w", newline="", encoding="utf-8") as arquivo:
-            escritor = csv.DictWriter(arquivo, fieldnames=list(registro[0].keys()))
-            escritor.writeheader()
-            escritor.writerows(registro)
+        # Grava o resto do ultimo bloco, que nao fechou o multiplo de 250.
+        gravados = (len(registro) // 250) * 250
+        gravar_bloco(destino_csv, registro[gravados:])
         print(f"\nEscores em {destino_csv}")
 
-        escores = np.array([r["escore_t04_pf"] for r in registro])
-        rotulos = np.array([r["label"] for r in registro])
+        # A AUC e calculada sobre o arquivo completo, e nao so sobre esta
+        # execucao: numa retomada, ``registro`` tem apenas a parte nova.
+        with open(destino_csv, newline="", encoding="utf-8") as arquivo:
+            todas = list(csv.DictReader(arquivo))
+        escores = np.array([float(r["escore_t04_pf"]) for r in todas])
+        rotulos = np.array([int(r["label"]) for r in todas])
+        print(f"Total no arquivo: {len(todas)} imagens")
         if len(np.unique(rotulos)) == 2:
             from sklearn.metrics import roc_auc_score
-            print(f"AUC parcial deste split: {roc_auc_score(rotulos, escores):.4f}")
+            print(f"AUC deste split: {roc_auc_score(rotulos, escores):.4f}")
 
     if falhas:
         destino_falhas = args.saida / f"{args.conjunto}_pf_falhas{sufixo}.csv"
