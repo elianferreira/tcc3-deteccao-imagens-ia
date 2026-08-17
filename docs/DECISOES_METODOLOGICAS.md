@@ -428,6 +428,38 @@ extraídas e classificadas, e T04 passa a ocupar sua coluna em
    Na fusão, T05 se manteve em 0,9996 e atribuiu a T04 peso −0,0403: aprendeu a
    ignorá-la. Ver seção 4.8.1.
 
+### T04 permanece fora da interface — e por qual motivo
+
+Decidido em 16/08/2026, depois de os três extratores estarem funcionando.
+
+Com SSISv2, PerspectiveFields e DeepLSD operando no WSL2, T04 **passou a ser
+tecnicamente executável** sobre uma imagem arbitrária enviada pela tela. Isso
+muda a natureza da limitação do RF02, e a mudança precisa ser dita: antes T04
+era indisponível porque o método não podia ser executado; agora é indisponível
+por **arquitetura de execução**.
+
+O obstáculo é o custo de carga. Os três modelos somam cerca de 1,5 GB
+(SSISv2 587 MB, PerspectiveFields 798 MB, DeepLSD 100 MB) e vivem em outro
+sistema operacional. Uma chamada por imagem que os suba a cada requisição gasta
+60 a 90 s apenas carregando — acima do limite de 30 s de RNF01. Atender o
+requisito exigiria um **serviço persistente no WSL2**, com o lado Windows
+conversando por socket: um subsistema novo, com modos de falha próprios.
+
+**Optou-se por não construí-lo**, por três razões:
+
+1. O comportamento atual **já cumpre** o previsto: RN07 determina que a falha de
+   um módulo não interrompa os demais, e `is_available()` reporta
+   indisponibilidade com motivo descritivo — coberto por teste automatizado.
+2. T04 mede cerca de **0,52 de AUC** neste corpus (seções 4.8 e 4.11 de
+   `RESULTADOS.md`). A caixa na tela exibiria ruído, o que é pior que uma
+   indisponibilidade honesta: sugeriria ao usuário uma evidência que não existe.
+3. O esforço se justificaria por completude formal do RF02, não por valor
+   analítico — e há itens de maior retorno em aberto.
+
+O modo de escores pré-extraídos existe justamente para separar os dois usos: a
+campanha experimental liga T04 por `TCC3_T04_ESCORES`, e a interface, que recebe
+imagens arbitrárias, nunca o liga. Ver `src/techniques/t04_geometry.py`.
+
 Nada disso altera o status de T04 como técnica completa: ela segue não
 replicada, e `external/CONTRATO.md` continua valendo para os outros dois
 componentes.
