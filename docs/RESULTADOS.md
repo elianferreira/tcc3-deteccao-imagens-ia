@@ -767,6 +767,66 @@ sementes de amostragem nesta representação.
 
 ---
 
+## 4.11 Segmentos de reta sobre o corpus deste trabalho
+
+`scripts/wsl/extrair_line_segments.py` · DeepLSD + PointNet oficial · split de
+teste, 8.993 imagens (7 sem nenhuma reta detectada, excluídas).
+
+| | AUC |
+|---|---|
+| Classificador oficial de retas | **0,5187** |
+
+Acaso, como o objeto-sombra (0,5384). O resultado **não** decorre de escore
+degenerado: há 8.992 valores distintos em 8.993 imagens, cobrindo de 0,00002 a
+0,9996. O classificador discrimina — apenas não separa as classes, com diferença
+de médias de 0,016.
+
+Dois componentes medidos, os dois em acaso, enquanto os mesmos classificadores
+sobre os dados dos autores dão 0,82. A replicação está correta; o que não
+transfere é o método.
+
+### A contagem de retas vale mais que a geometria delas
+
+Ao conferir os dados apareceu uma diferença sistemática entre as classes:
+
+| Classe | Retas por imagem (mediana) | Média |
+|---|---|---|
+| Reais (COCO) | 80 | 82,3 |
+| Sintéticas (latent diffusion) | 49 | 55,7 |
+
+E essa contagem, **sozinha**, é mais discriminativa que todo o classificador:
+
+| Preditor | AUC |
+|---|---|
+| Contagem de retas (um escalar) | **0,7051** |
+| Classificador geométrico oficial | 0,5187 |
+
+Dezenove pontos de diferença, a favor do escalar trivial.
+
+**O pipeline oficial não pode usar essa informação, por construção.**
+`LineSegmentDataset` fixa toda imagem em exatamente 250 retas, duplicando quando
+há menos e subamostrando quando há mais (`lines_dataset.py:24-32`) — o PointNet
+exige entrada de tamanho fixo. A contagem é descartada antes de o classificador
+ver qualquer coisa.
+
+**Como ler isso, sem exagerar.** Não é recomendação de usar a contagem como
+detector. Ela é um sinal de **baixo nível** — imagens de difusão latente saem
+mais suaves e com menos bordas retas detectáveis —, exatamente o tipo de atalho
+que este trabalho vem isolando e removendo em resolução, formato e perfil ICC
+(seção 4 de `DECISOES_METODOLOGICAS.md`). Usá-la mediria a característica do
+gerador, não geometria projetiva.
+
+O que o achado estabelece é mais interessante que isso, e em duas direções:
+
+1. **Sobre o corpus.** Há um confundidor de densidade de linhas entre as classes,
+   ainda não catalogado junto dos outros três.
+2. **Sobre o método.** A normalização para 250 retas torna T04 **imune** a esse
+   confundidor — o que é uma virtude de desenho —, e ainda assim o que sobra,
+   a geometria propriamente dita, fica em acaso neste domínio. O componente não
+   está perdendo por olhar o lugar errado; está perdendo por não transferir.
+
+---
+
 ## 5. Protocolo de robustez
 
 1.000 imagens in-distribution sob nove degradações.
