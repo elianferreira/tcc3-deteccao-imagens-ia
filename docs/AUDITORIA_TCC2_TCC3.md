@@ -184,8 +184,8 @@ Situação em 18/08/2026.
 | 5 | Repositório Git | 7 | ✓ github.com/elianferreira/tcc3-deteccao-imagens-ia |
 | 6 | Verificação contra AUC publicada | 3 | ~ T02 conferida (+6,1 p.p. em resolução nativa); T04 contra figura, não tabela |
 | 7 | RNF01 em CPU, 1.000 imagens | 3 | ✓ as quatro medidas; soma 17,871 s contra limite de 30 s |
-| 8 | T04 completa | 2 | ✗ bloqueada — replicação parcial entregue |
-| 9 | Escala integral | 1 | 🔄 193.000 imagens em montagem |
+| 8 | T04 completa | 2 | ~ os **tres** extratores rodam; resultado negativo (0,5333) e fora da interface |
+| 9 | Escala integral | 1 | ~ corpus de 192.638 montado e manifestos prontos; campanha **decidida como nao executar** |
 
 ### Detalhamento do que ficou parcial
 
