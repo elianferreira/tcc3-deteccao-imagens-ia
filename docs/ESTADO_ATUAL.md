@@ -137,7 +137,8 @@ Get-Process python | Select-Object Id,StartTime
 
 ## O que falta para o trabalho fechar
 
-Em uma frase: **falta medir T05 com T04 completa.** Todo o resto está feito.
+Em uma frase: **T05 com T04 completa está medida — e T04 não muda a fusão.**
+Falta apenas o protocolo OOD por famílias terminar.
 
 | # | Item | Estado |
 |---|---|---|

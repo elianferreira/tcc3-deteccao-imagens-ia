@@ -836,6 +836,81 @@ O que o achado estabelece é mais interessante que isso, e em duas direções:
 
 ---
 
+## 4.12 T04 completa: as três representações e a fusão definitiva
+
+`scripts/avaliar_t04_componentes.py` · `scripts/pipeline_t04_fusao.py` · split de
+teste, 9.000 imagens.
+
+Esta seção **substitui** a medição provisória da 4.8.1, obtida quando T04
+consistia apenas do componente objeto-sombra.
+
+### As três representações
+
+| Representação | n | AUC | Acurácia | FPR |
+|---|---|---|---|---|
+| Objeto-sombra | 9.000 | 0,5384 | 0,4880 | 0,1627 |
+| Campos de perspectiva | 9.000 | 0,5355 | 0,4981 | 0,1231 |
+| Segmentos de reta | 8.993 | 0,5187 | 0,5078 | 0,1556 |
+| **T04 (média das três)** | 9.000 | **0,5333** | 0,5024 | 0,0573 |
+
+As três em acaso, e a média **não** supera a melhor delas. Isso responde a uma
+pergunta que ficara em aberto: se as três errassem de formas complementares, a
+média seria menos ruidosa que cada uma. Não é o caso — elas erram junto.
+
+A queda do FPR na média (0,057 contra 0,12–0,16) não indica ganho: promediar
+três escores próximos do acaso os empurra para o centro, e menos amostras cruzam
+o limiar de 0,5. A AUC, que independe de limiar, não melhora.
+
+### T04 na fusão: não muda nada
+
+A comparação exige cuidado, e a primeira tentativa **deu resultado errado**.
+Confrontar a fusão nova com o modelo de três fontes gravado anteriormente
+sugeria ganho de +0,035 p.p. com DeLong p < 0,0001 — mas os dois haviam sido
+ajustados em ocasiões distintas, com pesos bem diferentes para T01 e T02. A
+comparação media reajuste, e não a presença de T04.
+
+Ajustando **ambos na mesma partição de validação**, de modo que a única
+diferença seja T04:
+
+| Fusão | AUC | Acurácia | FPR |
+|---|---|---|---|
+| T01+T02+T03 | 0,999595 | 0,9889 | 0,0042 |
+| T01+T02+T03+**T04** | 0,999571 | 0,9889 | 0,0044 |
+| Diferença | **−0,0024 p.p.** | | |
+
+**DeLong: z = −1,33, p = 0,182.** Estatisticamente indistinguível. Acrescentar
+T04 não melhora nem degrada a fusão.
+
+### O peso de T04, e por que não contradiz o acima
+
+| Fonte | Peso |
+|---|---|
+| T02 (espectral) | +4,2661 |
+| T01 (espacial) | +3,4303 |
+| T03 (estatístico) | +0,5205 |
+| **T04 (geométrico)** | **−0,2512** |
+
+O peso não é nulo — é metade do de T03 — e é **negativo**, embora T04 seja
+marginalmente *positiva* na validação (AUC 0,5427). A contradição é aparente: em
+regressão logística o coeficiente mede a contribuição **condicionada às demais
+fontes**, e sobre uma variável quase sem sinal ele se ajusta ao resíduo, isto é,
+ao ruído da partição de calibração.
+
+A prova de que é ruído está no teste: o peso não se traduz em desempenho
+(p = 0,182). T05 decide igual com e sem T04.
+
+### O que isso estabelece
+
+1. **A arquitetura tolera uma fonte inútil.** T05 mantém 0,9996 com uma quarta
+   entrada em acaso. Confirma por medição o que RN07 e RNF04 previam, e que até
+   aqui só fora verificado por desativação simulada de módulos.
+2. **T04 não contribui neste corpus.** Não é limitação da fusão, e sim das três
+   representações, que não transferem — ver seções 4.8, 4.10 e 4.11.
+3. **A fusão não é prejudicada por incluí-la.** Importa para o desenho: uma
+   arquitetura que degradasse ao receber ruído exigiria seleção de fontes.
+
+---
+
 ## 5. Protocolo de robustez
 
 1.000 imagens in-distribution sob nove degradações.
