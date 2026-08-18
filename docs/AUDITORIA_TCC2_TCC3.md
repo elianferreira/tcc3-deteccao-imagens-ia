@@ -43,7 +43,7 @@ das demais e isolamento de falhas (RN07).
 | T01 — Coocorrência + CNN | ✓ treinada localmente |
 | T02 — SPAI | ✓ pesos oficiais, inferência por subprocesso |
 | T03 — Benford/DCT + Random Forest | ✓ com busca em grade |
-| T04 — Geometria projetiva | ~ módulo implementado, execução bloqueada |
+| T04 — Geometria projetiva | ~ três extratores funcionando; resultado negativo (AUC 0,5333) |
 | T05 — Fusão | ✓ arquitetura própria |
 
 **Divergência declarada em T03:** o TCC 2 (Seção 3.6.4) descrevia um vetor de
@@ -173,14 +173,14 @@ histórico e sem cópia remota.
 
 ## Resumo das lacunas, por prioridade
 
-Situação em 15/08/2026.
+Situação em 18/08/2026.
 
 | # | Lacuna | Etapa | Estado |
 |---|---|---|---|
-| 1 | T01 com 3 sementes (42, 123, 456) | 4 | 🔄 **em execução** |
+| 1 | T01 com 3 sementes (42, 123, 456) | 4 | ✓ AUC 0,9964 ± 0,0002 |
 | 2 | Análise de erros | 5 | ✓ `scripts/analise_de_erros.py` |
 | 3 | Grad-CAM para T01 | 5 | ✓ `scripts/gradcam_t01.py` |
-| 4 | Protocolo OOD do TCC | 4 | 🔄 manifesto pronto, treino enfileirado |
+| 4 | Protocolo OOD do TCC | 4 | ✓ executado; T01 0,9463 e T05 0,9261 — ver secao 3.4 de RESULTADOS.md |
 | 5 | Repositório Git | 7 | ✓ github.com/elianferreira/tcc3-deteccao-imagens-ia |
 | 6 | Verificação contra AUC publicada | 3 | ~ T02 conferida (+6,1 p.p. em resolução nativa); T04 contra figura, não tabela |
 | 7 | RNF01 em CPU, 1.000 imagens | 3 | ✓ as quatro medidas; soma 17,871 s contra limite de 30 s |

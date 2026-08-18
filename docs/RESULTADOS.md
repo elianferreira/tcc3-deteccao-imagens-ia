@@ -176,6 +176,66 @@ como *mais reais* que as reais. Um detector que erra abaixo do acaso é pior que
 inútil, porque suas saídas induzem a decisão errada com confiança. Merece
 tratamento próprio na análise.
 
+### 3.4 O protocolo OOD do TCC 2, e quanto do colapso é falta de diversidade
+
+`results/resultados_ood_20260818_063540.csv` · a variante da Seção 3.6.1 do
+TCC 2, que até aqui nunca fora executada.
+
+Treino nos **onze geradores de difusão** (Glide, LDM, SD 1.3/1.4/2/XL/3, Flux,
+DALL·E 2/3, Firefly); avaliação em **GigaGAN, Midjourney v5 e v6.1** — famílias
+arquiteturais inteiramente ausentes do treino.
+
+| Técnica | OOD rigoroso (seção 3.1) | **OOD por famílias** | Δ |
+|---|---|---|---|
+| T01 | 0,8156 | **0,9463** | **+13,1 p.p.** |
+| T02 | 0,7365 | 0,6794 | −5,7 p.p. |
+| T03 | 0,6251 | 0,6956 | +7,1 p.p. |
+| T05 | 0,8228 | **0,9261** | **+10,3 p.p.** |
+
+O protocolo rigoroso treina em **um** gerador e avalia em doze; este treina em
+onze e avalia em três.
+
+### T02 é o controle que torna a comparação válida
+
+Os dois protocolos diferem em **duas** coisas ao mesmo tempo — a diversidade do
+treino e a composição do teste —, o que normalmente impediria atribuir o ganho a
+uma delas.
+
+T02 resolve isso. Ela **não é treinada**: usa os pesos oficiais do SPAI em
+ambos os protocolos. Logo, toda a variação de T02 vem da mudança do conjunto de
+teste. E ela **cai** 5,7 p.p., o que significa que o teste por famílias
+(GigaGAN + Midjourney) é o **mais difícil** dos dois.
+
+Sobre um conjunto de teste mais difícil, T01 ainda assim sobe 13,1 p.p. O ganho
+não pode vir do teste — vem do treino. **A diversidade do treinamento é a causa,
+e o efeito é grande.**
+
+### Por gerador
+
+| Gerador | T01 | T02 | T05 |
+|---|---|---|---|
+| GigaGAN | 0,9237 | 0,6906 | 0,8891 |
+| Midjourney v5 | 0,9813 | 0,7016 | 0,9643 |
+| Midjourney v6.1 | 0,9267 | 0,6270 | 0,9244 |
+
+Vale notar o contraste com a seção 3.3: lá, treinada em um só gerador, T01 media
+0,873 no GigaGAN e 0,935 no Midjourney v5. Aqui, com treino diverso, sobe para
+0,924 e 0,981 — **mesmo sendo os mesmos geradores de teste**.
+
+### O que isso muda na leitura do Capítulo 4
+
+O colapso OOD documentado na seção 3 é real, mas a seção 3.1 o mede em sua
+**forma mais severa**: treino em um único gerador. Boa parte dele é remediável
+por diversidade de treinamento, e não é propriedade intrínseca das técnicas.
+
+Isso não anula o achado central — T02, que não pode ser retreinada aqui, segue
+em 0,68, e nenhuma técnica chega ao desempenho in-distribution. Mas qualifica a
+conclusão: **o problema é menos de método e mais de composição do conjunto de
+treinamento** do que a seção 3.1 sozinha sugeriria.
+
+Para o texto, as duas medições devem constar. Reportar apenas a 3.1 exageraria o
+colapso; reportar apenas esta o subestimaria.
+
 ---
 
 ## 4. Calibração de T05: variante A × variante B
