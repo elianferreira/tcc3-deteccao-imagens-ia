@@ -971,6 +971,81 @@ A prova de que é ruído está no teste: o peso não se traduz em desempenho
 
 ---
 
+## 4.13 Por que T04 fica em acaso: o diagnóstico
+
+As seções 4.8 a 4.12 estabelecem *que* T04 não transfere. Esta estabelece *por
+quê*, eliminando hipóteses com dado em vez de argumento.
+
+### Três explicações descartadas
+
+**Não é pré-qualificação do corpus dos autores.** Poderia ser que o desempenho
+publicado dependesse da seleção de imagens que enganam detectores de sinal — o
+que tornaria a comparação injusta. Não é o caso: o subconjunto `easy`, com
+187.538 imagens **não** selecionadas, dá 0,8293 (objeto-sombra) e 0,9494
+(retas). O corpus deles não é especialmente fácil.
+
+**Não é diferença de resolução.** Ao contrário de T02 (seção 4.9), aqui não há
+incompatibilidade de escala: as máscaras e as retas que os autores distribuem
+estão em quadro 256×256, o mesmo do corpus normalizado deste trabalho. Os dois
+pipelines operam na mesma resolução.
+
+**Não é falha de replicação.** Os mesmos classificadores, com os mesmos pesos e
+o mesmo código de carga, produzem 0,82 a 0,95 sobre os dados dos autores
+(seções 4.7 e 4.10).
+
+### O mecanismo: falta de estrutura geométrica
+
+Contagem de segmentos de reta detectados pelo DeepLSD, conjunto de teste:
+
+| Corpus | Reais | Sintéticas |
+|---|---|---|
+| Kandinsky (autores) | 102 | **116** |
+| Corvi (este trabalho) | 80 | **49** |
+
+As imagens sintéticas deste corpus têm **menos da metade** da estrutura
+geométrica das do corpus de origem. O objeto-sombra concorda: **46,5% das
+sintéticas não produzem par objeto-sombra algum** — quase metade não oferece
+nada ao classificador.
+
+A causa provável é o gerador do split padrão. O `latent_diffusion` do corpus de
+Corvi et al. é um modelo antigo, de 256×256 **nativos**, cuja saída é suave, com
+poucas bordas retas e poucos objetos com sombra projetada nítida. As três
+representações de T04 exigem estrutura; ela não está lá.
+
+Repare ainda que a relação **inverte**: no Kandinsky as sintéticas têm *mais*
+retas que as reais (116 × 102); aqui têm *menos* (49 × 80). O sentido do sinal
+que os classificadores viram no treino aponta para o lado oposto neste corpus.
+
+### A hipótese que permanece aberta
+
+O diagnóstico acima não separa duas coisas:
+
+1. **O corpus** de Corvi et al. é geometricamente pobre como um todo; ou
+2. **O gerador específico** do split padrão (`latent_diffusion`, 256px) é pobre,
+   enquanto os do benchmark não seriam.
+
+O benchmark deste trabalho tem SDXL, Midjourney v5/v6.1, DALL·E 3 e Firefly —
+geradores modernos, de 1024px ou mais, com cenas estruturadas. Se T04 medisse
+melhor sobre eles, a conclusão mudaria de *"o método não transfere"* para
+*"o método exige imagens com geometria, e o `latent_diffusion` de 256px não a
+tem"*. São leituras bem diferentes para o Capítulo 4.
+
+**Como resolver.** Extrair as três representações sobre as 12.638 imagens do
+benchmark e comparar por gerador. Cerca de 2 h; os extratores e os scripts já
+existem:
+
+```powershell
+scripts\t04_extracao.bat            # objeto-sombra
+scripts\t04_campos.bat  test cuda   # campos de perspectiva
+scripts\t04_linhas.bat              # segmentos de reta
+```
+
+Enquanto o teste não for feito, o Capítulo 4 deve reportar o resultado negativo
+**com essa ressalva**: ele está medido sobre um único gerador sintético, e
+sobre um que produz pouca geometria.
+
+---
+
 ## 5. Protocolo de robustez
 
 1.000 imagens in-distribution sob nove degradações.

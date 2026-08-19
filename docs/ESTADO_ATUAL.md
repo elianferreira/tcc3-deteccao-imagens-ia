@@ -1,6 +1,6 @@
 # Estado atual e como retomar
 
-Atualizado em 18/08/2026.
+Atualizado em 19/08/2026.
 
 Este arquivo existe para que o trabalho possa ser retomado em outra sessão sem
 depender do histórico da conversa. Tudo que importa está no repositório.
@@ -13,13 +13,13 @@ depender do histórico da conversa. Tudo que importa está no repositório.
 > Leia `docs/ESTADO_ATUAL.md` e continue do ponto de retomada. **Antes de supor
 > qualquer progresso, confira o que ainda está vivo.**
 
-O primeiro comando de qualquer sessão nova, porque o log de uma execução
-interrompida para no meio sem marca de erro:
+**Em 19/08/2026 não havia nada em execução** e nenhuma etapa pendente. Se uma
+sessão futura deixar algo rodando, confirme antes de supor progresso — o log de
+uma execução interrompida para no meio sem marca de erro:
 
 ```powershell
-schtasks /query /tn "tcc3_ood_familias" /fo list | Select-String "Status"
-Get-Content logs\ood_familias.log -Tail 5
 Get-Process python | Select-Object Id,StartTime
+schtasks /query /fo list | Select-String "tcc3_"
 ```
 
 "Em execução" significa vivo. "Pronto" significa terminado **ou morto** — e a
@@ -47,33 +47,27 @@ Repositório: <https://github.com/elianferreira/tcc3-deteccao-imagens-ia> (priva
 
 ## PONTO DE RETOMADA
 
-**Só falta uma coisa: o protocolo OOD por famílias terminar.** Todo o resto está
-medido e documentado.
+**Nada está em execução, e nenhuma lacuna de execução permanece.** Todas as
+medições previstas no TCC 2 foram feitas e documentadas.
 
-### Em execução
+O que resta é **escrita**: redigir o Capítulo 4 a partir de `RESULTADOS.md`, que
+traz seção a seção os números e as ressalvas de como reportar cada um.
 
-| Item | Tarefa | Recurso | Log |
-|---|---|---|---|
-| Protocolo OOD por famílias, fase de inferência | `tcc3_ood_familias` | GPU | `logs/ood_familias.log` |
+### A pergunta em aberto, se houver tempo
 
-Lançado em 18/08, cerca de 90 min. Se morrer, basta relançar — é retomável pelo
-cache de escores:
+A seção 4.13 de `RESULTADOS.md` diagnostica por que T04 fica em acaso: este
+corpus oferece pouca estrutura geométrica. As sintéticas têm 49 segmentos de reta
+por imagem contra 116 do corpus dos autores, e 46,5% não produzem par
+objeto-sombra algum.
 
-```powershell
-schtasks /run /tn "tcc3_ood_familias"
-```
+O diagnóstico **não separa** duas possibilidades: se o corpus de Corvi et al. é
+geometricamente pobre como um todo, ou se apenas o `latent_diffusion` de 256 px
+do split padrão o é. O benchmark tem SDXL, Midjourney, DALL·E 3 e Firefly, de
+1024 px ou mais.
 
-**Não** relançar `tcc3_pos_multiseed`: aquele pipeline usa `--fit` e retreinaria
-tudo. O treino já terminou e os modelos estão em `weights_ood_familias/`; a
-tarefa `tcc3_ood_familias` roda só a inferência, que é o que falta.
-
-### Quando terminar
-
-Registrar o resultado em `RESULTADOS.md`. É a variante do protocolo OOD escrita
-na Seção 3.6.1 do TCC 2 — treino nos geradores de difusão, avaliação em GigaGAN
-e Midjourney — que até aqui nunca fora executada.
-
----
+Resolver isso muda a conclusão do Capítulo 4 de *"o método não transfere"* para
+*"o método exige geometria, e este gerador não a tem"*. Cerca de 2 h de extração;
+os extratores e os scripts já existem — ver o fim da seção 4.13.
 
 ## Onde o trabalho chegou
 
