@@ -7,6 +7,46 @@ depender do histórico da conversa. Tudo que importa está no repositório.
 
 ---
 
+## ❓ PERGUNTA EM ABERTO — retomar por aqui
+
+> **T04 falha por causa do corpus inteiro, ou só por causa do
+> `latent_diffusion` de 256 px?**
+
+As três representações de T04 medem em acaso (0,52 a 0,54) sobre o split padrão.
+A seção 4.13 de [`RESULTADOS.md`](RESULTADOS.md) mostra por quê: este corpus
+oferece pouca estrutura geométrica — as sintéticas têm **49 segmentos de reta**
+por imagem contra **116** do corpus dos autores, e 46,5% não produzem par
+objeto-sombra algum.
+
+Mas o split padrão tem **um único gerador sintético**, o `latent_diffusion` de
+256 px nativos, que é antigo e produz imagens suaves. O benchmark tem SDXL,
+Midjourney v5/v6.1, DALL·E 3 e Firefly — de 1024 px ou mais, com cenas
+estruturadas.
+
+**Por que importa.** A conclusão do Capítulo 4 muda de *"o método geométrico não
+transfere"* para *"o método exige imagens com geometria, e este gerador não a
+tem"*. São afirmações bem diferentes para a banca.
+
+**Como responder.** Extrair as três representações sobre as 12.638 imagens do
+benchmark e comparar por gerador. Cerca de 2 h; os extratores e os scripts já
+existem e estão testados:
+
+```powershell
+scripts\t04_extracao.bat              # objeto-sombra   (GPU, ~45 min)
+scripts\t04_campos.bat  test cuda     # campos de perspectiva (GPU, ~45 min)
+scripts\t04_linhas.bat                # segmentos de reta (CPU, ~2 h)
+python scripts\consolidar_escores_t04.py
+python scripts\avaliar_t04_componentes.py --split test
+```
+
+Falta apontar os três para o manifesto do benchmark em vez do padrão — hoje eles
+usam `data/manifesto30k_standard.csv`.
+
+**É opcional.** Todas as medições exigidas pelo TCC 2 já estão feitas; esta
+apenas qualificaria melhor um resultado negativo.
+
+---
+
 ## Como retomar em uma sessão nova
 
 > Estou continuando meu TCC 3 em `C:\Users\ferre\projects\tcc3-deteccao-imagens-ia`.
@@ -53,21 +93,7 @@ medições previstas no TCC 2 foram feitas e documentadas.
 O que resta é **escrita**: redigir o Capítulo 4 a partir de `RESULTADOS.md`, que
 traz seção a seção os números e as ressalvas de como reportar cada um.
 
-### A pergunta em aberto, se houver tempo
-
-A seção 4.13 de `RESULTADOS.md` diagnostica por que T04 fica em acaso: este
-corpus oferece pouca estrutura geométrica. As sintéticas têm 49 segmentos de reta
-por imagem contra 116 do corpus dos autores, e 46,5% não produzem par
-objeto-sombra algum.
-
-O diagnóstico **não separa** duas possibilidades: se o corpus de Corvi et al. é
-geometricamente pobre como um todo, ou se apenas o `latent_diffusion` de 256 px
-do split padrão o é. O benchmark tem SDXL, Midjourney, DALL·E 3 e Firefly, de
-1024 px ou mais.
-
-Resolver isso muda a conclusão do Capítulo 4 de *"o método não transfere"* para
-*"o método exige geometria, e este gerador não a tem"*. Cerca de 2 h de extração;
-os extratores e os scripts já existem — ver o fim da seção 4.13.
+Ver a **pergunta em aberto** no topo deste arquivo.
 
 ## Onde o trabalho chegou
 
