@@ -971,6 +971,82 @@ A prova de que é ruído está no teste: o peso não se traduz em desempenho
 
 ---
 
+## 4.12.1 T04 na interface: serviço residente e RNF01 remedido
+
+Medido em 30/08/2026. Esta seção registra uma mudança de **arquitetura de
+execução**, não de resultado: os números de T04 seguem os das seções 4.8 a 4.12.
+
+### O que mudou
+
+T04 passou a pontuar imagens arbitrárias enviadas pela tela, por um serviço que
+mantém os três extratores residentes no WSL2. A decisão de 17/08 de mantê-la
+fora da interface apoiava-se numa estimativa de carga que nunca fora medida:
+
+| | Estimado em 17/08 | Medido em 30/08 |
+|---|---|---|
+| VRAM dos três modelos | ~1,5 GB | **883 MiB** |
+| Tempo de carga | 60 a 90 s | **~10 s** |
+
+### RNF01, pelo caminho real da interface
+
+`scripts/medir_rnf01_com_t04.py`, 4 imagens do split de teste, processo frio:
+
+| Módulo | Sem T04 | Com T04 |
+|---|---|---|
+| T01 | 4,56 s | 4,56 ± 0,04 s |
+| T02 | 14,00 s | 13,89 ± 0,12 s |
+| T03 | 0,08 s | 0,08 s |
+| T04 | — | **1,50 ± 0,11 s** |
+| **Total** | **18,84 s** | **20,03 s** |
+
+Margem de 9,97 s contra o teto de 30 s. T02 **não** é prejudicada em regime
+(13,89 contra 14,00), isto é, não há disputa de GPU entre o SPAI e o serviço.
+
+### Um defeito que a medição revelou
+
+A primeira medição acusou 40,5 s na imagem inicial — **acima do teto** —, com
+T02 em 33,1 s e desvio de ±7,87 s. Não era disputa: era criação do contexto CUDA
+no primeiro uso. Corrigido com uma inferência de aquecimento na carga da
+interface; a primeira imagem passou a 20,0 s e o desvio de T02 caiu para ±0,12 s.
+
+Vale registrar porque o requisito era violado exatamente para o **primeiro**
+usuário depois de a interface subir — o caso menos provável de aparecer em teste
+e o mais provável de aparecer em demonstração.
+
+### Paridade com os números desta dissertação
+
+`scripts/verificar_paridade_servico_t04.py`, 120 comparações sobre 40 imagens:
+
+| Representação | Maior diferença |
+|---|---|
+| Campos de perspectiva | 1,1e-16 |
+| Segmentos de reta | 9,7e-17 |
+| Objeto-sombra | 2,3e-04 |
+
+O resíduo do objeto-sombra foi caracterizado, e **não** é erro de reprodução.
+Classificando as máscaras que a extração em lote gravou em disco:
+
+| | Escore |
+|---|---|
+| `batch_size=1` | 0,458235770 — igual ao serviço (dif. 4,6e-10) |
+| `batch_size=128` | 0,458009332 — igual ao publicado (dif. 3,3e-07) |
+
+Toda a diferença vem de a cuDNN escolher algoritmos distintos conforme o tamanho
+do lote. `avaliar_t04_corpus.py` classifica em lotes de 128; um serviço que
+pontua uma imagem por vez usa lote 1. É inerente, e mede 2,3e-04 sobre uma
+probabilidade — não move nenhum número exibido nem a AUC de 0,5384.
+
+### O que isto não muda
+
+T04 segue medindo 0,5333 neste corpus, e a caixa na tela exibe ruído. O ganho é
+de **demonstrabilidade**: a arquitetura de quatro fontes passa a ser observável
+em funcionamento, com uma fonte fraca real em vez de módulos desativados por
+simulação. A interface passou a carregar `t05_fusion__quatro_fontes.pkl` quando
+T04 está disponível — sem isso a fusão descartaria a quarta entrada em silêncio,
+já que o coeficiente de T04 no modelo de três fontes é exatamente 0,0.
+
+---
+
 ## 4.13 Por que T04 fica em acaso: o diagnóstico
 
 As seções 4.8 a 4.12 estabelecem *que* T04 não transfere. Esta estabelece *por

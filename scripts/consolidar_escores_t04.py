@@ -44,18 +44,24 @@ from src.config import DATA_DIR, RESULTS_DIR      # noqa: E402
 
 # Componente -> (padrao de busca, coluna de escore na origem)
 FONTES = {
-    "object_shadow": (RESULTS_DIR, "t04_escores_{variante}.csv", "escore_t04"),
+    "object_shadow": (RESULTS_DIR, "t04_escores_{variante}{sufixo}.csv", "escore_t04"),
     "perspective_fields": (DATA_DIR / "t04_perspective_fields",
-                           "*_pf_{variante}*.csv", "escore_t04_pf"),
+                           "{conjunto}_pf_{variante}*.csv", "escore_t04_pf"),
     "line_segment": (DATA_DIR / "t04_line_segments",
-                     "*_ls_{variante}*.csv", "escore_t04_ls"),
+                     "{conjunto}_ls_{variante}*.csv", "escore_t04_ls"),
 }
 
 
 def carregar(componente: str, raiz: Path, padrao: str, coluna: str,
-             variante: str) -> pd.DataFrame | None:
-    """Le e concatena todos os CSV de um componente, sobre todos os splits."""
-    alvo = padrao.format(variante=variante)
+             variante: str, conjunto: str, sufixo: str) -> pd.DataFrame | None:
+    """Le e concatena os CSV de um componente, sobre todos os splits.
+
+    O filtro por ``conjunto`` nao e cosmetico. O glob antigo varria o
+    diretorio inteiro, de modo que uma segunda rodada sobre outro corpus --
+    o benchmark de geradores modernos, por exemplo -- seria concatenada a
+    rodada padrao **em silencio**, misturando dois corpora num arquivo so.
+    """
+    alvo = padrao.format(variante=variante, conjunto=conjunto, sufixo=sufixo)
     caminhos = sorted(raiz.glob(alvo)) if "*" in alvo else [raiz / alvo]
     caminhos = [c for c in caminhos if c.exists() and "falhas" not in c.name]
     if not caminhos:
@@ -88,6 +94,11 @@ def main() -> int:
                         choices=["combined", "indoor", "outdoor"])
     parser.add_argument("--saida", type=Path,
                         default=RESULTS_DIR / "t04_escores_componentes.csv")
+    parser.add_argument("--conjunto", default="tcc3_30k",
+                        help="etiqueta da rodada; separa corpora distintos")
+    parser.add_argument("--sufixo", default="",
+                        help="sufixo do CSV de objeto-sombra (ver "
+                             "avaliar_t04_corpus.py --sufixo)")
     args = parser.parse_args()
 
     print("=" * 70)
@@ -97,7 +108,8 @@ def main() -> int:
 
     tabelas = {}
     for componente, (raiz, padrao, coluna) in FONTES.items():
-        tabela = carregar(componente, raiz, padrao, coluna, args.variante)
+        tabela = carregar(componente, raiz, padrao, coluna, args.variante,
+                          args.conjunto, args.sufixo)
         if tabela is not None:
             tabelas[componente] = tabela
 

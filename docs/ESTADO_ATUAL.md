@@ -27,20 +27,53 @@ estruturadas.
 transfere"* para *"o método exige imagens com geometria, e este gerador não a
 tem"*. São afirmações bem diferentes para a banca.
 
-**Como responder.** Extrair as três representações sobre as 12.638 imagens do
-benchmark e comparar por gerador. Cerca de 2 h; os extratores e os scripts já
-existem e estão testados:
+**Como responder.** Extrair as três representações sobre o split `test` de
+`data/manifesto30k_ood.csv` — **13.788 imagens**, 11 geradores modernos (SDXL,
+Midjourney v5/v6.1, DALL·E 2/3, Firefly, Flux, GigaGAN, SD 1.3/1.4/2/3) mais
+3.150 reais — e comparar a AUC **por gerador**.
+
+Um comando faz as três etapas, com os dispositivos já casados aos da rodada
+padrão e a etiqueta de conjunto separada:
 
 ```powershell
-scripts\t04_extracao.bat              # objeto-sombra   (GPU, ~45 min)
-scripts\t04_campos.bat  test cuda     # campos de perspectiva (GPU, ~45 min)
-scripts\t04_linhas.bat                # segmentos de reta (CPU, ~2 h)
-python scripts\consolidar_escores_t04.py
-python scripts\avaliar_t04_componentes.py --split test
+scripts	04_benchmark.bat
 ```
 
-Falta apontar os três para o manifesto do benchmark em vez do padrão — hoje eles
-usam `data/manifesto30k_standard.csv`.
+Depois, nesta ordem:
+
+```powershell
+python scriptsvaliar_t04_corpus.py --conjunto tcc3_ood --splits test --sufixo _ood
+python scripts\consolidar_escores_t04.py --conjunto tcc3_ood --sufixo _ood ^
+       --saida results	04_escores_componentes_ood.csv
+python scriptsvaliar_t04_componentes.py --split test ^
+       --escores results	04_escores_componentes_ood.csv
+```
+
+**Tempo: 5 a 6 h em sequência**, não as 2 h estimadas antes — a estimativa
+anterior usava 12.638 imagens (contagem errada) e supunha GPU para os campos.
+As etapas de CPU podem rodar em paralelo com a de GPU, o que traz para ~4 h.
+
+**Três armadilhas, todas já neutralizadas no código em 30/08/2026** — registradas
+porque explicam por que os comandos têm esses argumentos:
+
+1. `--conjunto tcc3_ood` impede que os mapas desta rodada sobrescrevam os da
+   dissertação (armadilha 5).
+2. `--sufixo _ood` impede que `avaliar_t04_corpus.py` grave por cima de
+   `results/t04_escores_combined.csv`, que é a fonte da AUC 0,5384. O nome do
+   arquivo de saída não continha a etiqueta de conjunto.
+3. `--conjunto` em `consolidar_escores_t04.py` impede que ele varra o diretório
+   inteiro e **concatene as duas rodadas em silêncio**, misturando dois corpora.
+   Era o comportamento anterior.
+
+Os dispositivos no `.bat` (objeto-sombra em GPU, campos e retas em CPU) são os
+mesmos da rodada padrão, e isso não é detalhe: trocar CPU por GPU nos campos
+altera o escore em até 2,2e-02, e a comparação com os números da dissertação é
+justamente o objetivo.
+
+**Como ler o resultado.** Se a T04 subir nos geradores de 1024 px e ficar em
+acaso no `latent_diffusion`, o método exige geometria e o corpus é que não a
+tem. Se ficar em 0,53 em todos, o método não transfere. Os dois desfechos são
+reportáveis.
 
 **É opcional.** Todas as medições exigidas pelo TCC 2 já estão feitas; esta
 apenas qualificaria melhor um resultado negativo.
@@ -82,6 +115,39 @@ O TCC 2 (documento de projeto) está em
 | `external/CONTRATO.md` | Integração com os repositórios oficiais |
 
 Repositório: <https://github.com/elianferreira/tcc3-deteccao-imagens-ia> (privado)
+
+---
+
+## Trabalho futuro planejado
+
+Registrado em 30/08/2026, a pedido. **Nada aqui foi executado.**
+
+### 1. Campanha em escala integral
+
+O treino atual usa **42.000 imagens** (split `train` de
+`data/manifesto30k_standard.csv`, corpus de 60.000). A escala integral leva o
+treino a **126.000** (`data/manifesto_escala_standard.csv`, corpus de 180.000
+sobre as 192.638 montadas em disco).
+
+Isto reverte a decisão de 16/08 de não executar a escala. Comando registrado na
+seção "Decisões tomadas" deste arquivo.
+
+### 2. Geradores de 2025/2026 — testar antes de treinar
+
+Duas etapas, **nesta ordem**, e a ordem é o ponto:
+
+1. **Testar primeiro.** Avaliar a arquitetura já treinada sobre imagens de
+   geradores atuais, sem retreinar nada. Isso mede se ela **se mantém boa** em
+   material que não existia quando o corpus foi montado — é uma medição de
+   generalização temporal, e o resultado vale por si, positivo ou negativo.
+2. **Treinar depois.** Só então incorporar esses geradores ao treino.
+
+Inverter a ordem destruiria a medição: uma vez que os geradores novos entram no
+treino, não há mais como saber como a arquitetura se comportava sem eles. É o
+mesmo raciocínio que torna o protocolo OOD informativo.
+
+O corpus de teste atual já cobre até Flux e Midjourney v6.1; o que falta são
+geradores posteriores à montagem do corpus.
 
 ---
 
@@ -161,17 +227,53 @@ efeito de escala insuficiente.
 **Reversível:** `scripts/pipeline_campanha.py --corpus data/corvi2024_escala
 --prefixo escala`.
 
-### T04 não entra na interface
+### T04 entrou na interface — decisão de 17/08 revertida em 30/08
 
-Decidido em 17/08/2026. Com os extratores de pé, T04 passou a ser tecnicamente
-executável sobre uma imagem enviada pela tela — mas os três modelos somam 1,5 GB
-e vivem em outro sistema operacional, de modo que uma chamada por imagem gastaria
-60 a 90 s só carregando, acima do limite de RNF01. Exigiria um serviço
-persistente no WSL2.
+Decidido em 17/08/2026 manter T04 fora da tela, por estimativa de 1,5 GB de
+modelos e 60 a 90 s de carga por imagem, acima do teto de 30 s do RNF01.
 
-Não construído: o comportamento atual já cumpre RN07, e T04 mede cerca de 0,53
-neste corpus, de modo que a caixa na tela exibiria ruído. Justificativa completa
-na seção 5 de `DECISOES_METODOLOGICAS.md`.
+**A estimativa nunca fora medida, e estava errada:** 883 MiB e ~10 s. Com um
+serviço residente no WSL2, T04 passou a pontuar imagens arbitrárias.
+
+| | Estimado | Medido |
+|---|---|---|
+| VRAM | ~1,5 GB | 883 MiB |
+| Carga | 60–90 s | ~10 s |
+| RNF01 com T04 | violaria | **20,03 s** (teto 30 s) |
+
+Construído:
+
+| Arquivo | O quê |
+|---|---|
+| `scripts/wsl/servico_t04.py` | serviço residente, dois processos |
+| `scripts/wsl/servico_t04_controle.sh` | iniciar/parar/consultar no WSL |
+| `scripts/verificar_paridade_servico_t04.py` | valida contra os escores da dissertação |
+| `scripts/medir_rnf01_com_t04.py` | remede o RNF01 pelo caminho da interface |
+
+**Como subir** (as duas portas, com os dispositivos casados ao lote):
+
+```powershell
+# 8404: objeto-sombra em GPU
+Start-Process wsl.exe -ArgumentList "-d","Ubuntu-24.04","-u","root","--",
+  "/root/geo/bin/python","-u","/mnt/c/.../scripts/wsl/servico_t04.py",
+  "--porta","8404","--dispositivo","cuda","--representacoes","object_shadow"
+
+# 8405: campos e retas em CPU, com a placa escondida
+Start-Process wsl.exe -ArgumentList "-d","Ubuntu-24.04","-u","root","--","env",
+  "CUDA_VISIBLE_DEVICES=","/root/geo/bin/python","-u","/mnt/c/.../servico_t04.py",
+  "--porta","8405","--dispositivo","cpu",
+  "--representacoes","perspective_fields,line_segment"
+```
+
+Depois, a interface com `TCC3_T04_SERVICO=1`. **Sem essa variável nada muda** —
+T04 volta a se declarar indisponível, como antes.
+
+Paridade: campos e retas exatos até 1e-16; objeto-sombra em 2,3e-04, resíduo de
+cuDNN com lote 1 contra lote 128. Justificativa completa na seção 5 de
+`DECISOES_METODOLOGICAS.md`.
+
+**O resultado não muda:** T04 mede 0,53 e a caixa exibe ruído. O ganho é de
+demonstrabilidade da arquitetura de quatro fontes.
 
 ---
 
@@ -211,3 +313,14 @@ Registradas porque cada uma já custou tempo.
 9. **`wmic` não existe** nesta build do Windows 11.
 10. **A interface não é afetada** pelos treinos: `run_multi_seed` grava em
     `weights/t01_seed<N>.pt`, sem tocar em `t01_cooccurrence.pt`.
+11. **Um processo não serve as três representações de T04.** O PointNet dos
+    autores (`lines_model.py:39-41`) manda a matriz identidade para CUDA sempre
+    que `torch.cuda.is_available()` for verdadeiro — não quando o modelo está na
+    GPU. O contorno é `CUDA_VISIBLE_DEVICES=""`, que vale para o processo
+    inteiro e conflita com o objeto-sombra, que roda em GPU. Daí dois serviços.
+12. **Processo lançado de dentro do `wsl.exe` não sobrevive ao retorno da
+    chamada** — nem com `setsid`, nem com `nohup`. Morre sem escrever no log,
+    parecendo a armadilha nº 2. O que segura é lançar pelo lado Windows com
+    `Start-Process wsl.exe ...`, que mantém um processo vivo no Windows
+    ancorando o do WSL. Vale igual para o Gradio: `python app/gradio_app.py`
+    em segundo plano da sessão morre junto com ela.

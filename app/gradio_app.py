@@ -56,7 +56,42 @@ class DetectionService:
     def __init__(self) -> None:
         self.techniques: dict[str, object] = {}
         self.load_errors: dict[str, str] = {}
+        # Qual modelo de fusao foi carregado; depende de T04 estar disponivel.
+        self.fusion_model_name: str = ""
         self._load_all()
+        self._aquecer()
+
+    def _aquecer(self) -> None:
+        """Uma inferencia descartavel, para que a primeira imagem real nao pague
+        o arranque a frio.
+
+        Medido em 30/08/2026: sem aquecimento, a primeira analise custou 40,5 s
+        -- **acima do teto de 30 s do RNF01** --, contra 20,7 s em regime. O
+        excedente e a criacao do contexto CUDA e a escolha de algoritmos da
+        cuDNN, que acontecem uma vez e ficam em cache no processo.
+
+        Nao e cosmetico: sem isto, o primeiro usuario a enviar uma imagem depois
+        de a interface subir veria o requisito violado.
+
+        Falhas aqui sao silenciosas de proposito. O aquecimento e otimizacao; se
+        ele nao funcionar, a analise real ainda funciona -- so mais devagar na
+        primeira vez. Derrubar a interface por causa disso seria pior.
+        """
+        import tempfile
+
+        import numpy as np
+        from PIL import Image
+
+        try:
+            with tempfile.TemporaryDirectory(prefix="aquecimento_") as pasta:
+                alvo = Path(pasta) / "aquecimento.png"
+                gerador = np.random.default_rng(0)
+                Image.fromarray(
+                    gerador.integers(0, 256, size=(256, 256, 3), dtype=np.uint8)
+                ).save(alvo)
+                self.analyze(alvo)
+        except Exception:                                # noqa: BLE001, S110
+            pass
 
     def _load_all(self) -> None:
         # T01 - checkpoint treinado localmente
@@ -105,10 +140,34 @@ class DetectionService:
             self.load_errors["T04"] = str(error)
 
         # T05 - classificador de fusao
+        #
+        # O modelo precisa casar com as fontes que de fato produzem escore.
+        # Ha dois ajustados:
+        #
+        #   t05_fusion.pkl                 tres fontes; o coeficiente de T04 e
+        #                                  exatamente 0,0, porque T04 nunca
+        #                                  esteve presente no ajuste
+        #   t05_fusion__quatro_fontes.pkl  quatro fontes; peso de T04 = -0,2512
+        #
+        # Carregar o de tres fontes com T04 disponivel faria a fusao **descartar
+        # silenciosamente** a quarta entrada -- o pior dos dois mundos: a tela
+        # mostraria T04 e a decisao a ignoraria. Por isso a escolha segue a
+        # disponibilidade real de T04, e nao uma constante.
+        #
+        # Que os dois deem praticamente o mesmo resultado (DeLong p = 0,182,
+        # secao 4.12 de RESULTADOS.md) e um achado medido, nao uma licenca para
+        # trocar um pelo outro sem criterio.
         try:
-            fusion_path = WEIGHTS_DIR / "t05_fusion.pkl"
+            if "T04" in self.techniques:
+                fusion_path = WEIGHTS_DIR / "t05_fusion__quatro_fontes.pkl"
+                if not fusion_path.exists():
+                    fusion_path = WEIGHTS_DIR / "t05_fusion.pkl"
+            else:
+                fusion_path = WEIGHTS_DIR / "t05_fusion.pkl"
+
             if fusion_path.exists():
                 self.techniques["T05"] = T05Fusion().load(fusion_path)
+                self.fusion_model_name = fusion_path.name
             else:
                 self.load_errors["T05"] = f"modelo ausente em {fusion_path}"
         except Exception as error:                      # noqa: BLE001

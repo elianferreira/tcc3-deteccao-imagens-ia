@@ -130,6 +130,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="T04 sobre o corpus deste trabalho")
     parser.add_argument("--raiz", type=Path, default=Path("data/t04_object_shadow"))
     parser.add_argument("--conjunto", default="tcc3_30k")
+    # Sem isto, uma rodada sobre outro corpus grava por cima de
+    # results/t04_escores_combined.csv, que e a fonte dos numeros da
+    # dissertacao (AUC 0,5384). O conjunto ja separa os mapas de entrada;
+    # esta opcao separa tambem a saida.
+    parser.add_argument("--sufixo", default="",
+                        help="sufixo no nome dos arquivos de saida, para nao "
+                             "sobrescrever a rodada padrao (ex.: _ood)")
     parser.add_argument("--splits", nargs="+", default=["test", "train", "val"])
     parser.add_argument("--variantes", nargs="+", default=list(VARIANTES),
                         choices=list(VARIANTES))
@@ -217,11 +224,11 @@ def main() -> int:
                 "escore_t04": y_prob, "par_vazio": vazio.astype(int),
             }))
 
-        destino_json = RESULTS_DIR / f"t04_corpus_{variante}.json"
+        destino_json = RESULTS_DIR / f"t04_corpus_{variante}{args.sufixo}.json"
         destino_json.write_text(json.dumps(saida, indent=2, ensure_ascii=False),
                                 encoding="utf-8")
 
-        destino_csv = RESULTS_DIR / f"t04_escores_{variante}.csv"
+        destino_csv = RESULTS_DIR / f"t04_escores_{variante}{args.sufixo}.csv"
         pd.concat(linhas, ignore_index=True).to_csv(destino_csv, index=False)
 
         print(f"  gravado: {destino_json.name}, {destino_csv.name}")

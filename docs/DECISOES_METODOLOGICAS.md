@@ -438,23 +438,77 @@ muda a natureza da limitação do RF02, e a mudança precisa ser dita: antes T04
 era indisponível porque o método não podia ser executado; agora é indisponível
 por **arquitetura de execução**.
 
-O obstáculo é o custo de carga. Os três modelos somam cerca de 1,5 GB
-(SSISv2 587 MB, PerspectiveFields 798 MB, DeepLSD 100 MB) e vivem em outro
-sistema operacional. Uma chamada por imagem que os suba a cada requisição gasta
-60 a 90 s apenas carregando — acima do limite de 30 s de RNF01. Atender o
-requisito exigiria um **serviço persistente no WSL2**, com o lado Windows
-conversando por socket: um subsistema novo, com modos de falha próprios.
+O obstáculo apontado à época era o custo de carga. Os três modelos somam cerca
+de 1,5 GB (SSISv2 587 MB, PerspectiveFields 798 MB, DeepLSD 100 MB) e vivem em
+outro sistema operacional; estimou-se que uma chamada por imagem gastaria 60 a
+90 s apenas carregando — acima do teto de 30 s do RNF01. Atender o requisito
+exigiria um **serviço persistente no WSL2**.
 
 **Optou-se por não construí-lo**, por três razões:
 
 1. O comportamento atual **já cumpre** o previsto: RN07 determina que a falha de
    um módulo não interrompa os demais, e `is_available()` reporta
    indisponibilidade com motivo descritivo — coberto por teste automatizado.
-2. T04 mede cerca de **0,52 de AUC** neste corpus (seções 4.8 e 4.11 de
+2. T04 mede cerca de **0,53 de AUC** neste corpus (seções 4.8 e 4.12 de
    `RESULTADOS.md`). A caixa na tela exibiria ruído, o que é pior que uma
    indisponibilidade honesta: sugeriria ao usuário uma evidência que não existe.
 3. O esforço se justificaria por completude formal do RF02, não por valor
    analítico — e há itens de maior retorno em aberto.
+
+### Decisão revista em 30/08/2026: a estimativa estava errada
+
+A justificativa acima foi construída sobre uma estimativa **nunca medida**. Ao
+medir, o argumento central não se sustentou:
+
+| | Estimado em 17/08 | Medido em 30/08 |
+|---|---|---|
+| VRAM dos três modelos | ~1,5 GB | **883 MiB** |
+| Tempo de carga | 60 a 90 s | **~10 s** |
+
+O erro no tempo é de quase uma ordem de grandeza. Com os modelos residentes, o
+custo por imagem cai para a inferência, e o serviço foi construído:
+`scripts/wsl/servico_t04.py`.
+
+**São dois processos, não um.** A extração em lote não usou o mesmo dispositivo
+para as três representações — o que só aparece nos logs, não no código:
+objeto-sombra em GPU, campos e retas em CPU. E CPU não é opcional para as retas:
+o PointNet dos autores (`lines_model.py:39-41`) move a matriz identidade para
+CUDA sempre que `torch.cuda.is_available()` for verdadeiro, de modo que o único
+contorno é `CUDA_VISIBLE_DEVICES=""` — que vale para o processo inteiro. Um
+processo só não consegue usar a GPU para uma representação e escondê-la para
+outra.
+
+**Paridade verificada** (`scripts/verificar_paridade_servico_t04.py`, 120
+comparações sobre 40 imagens): campos e retas exatos até 1e-16; objeto-sombra
+com resíduo de 2,3e-04, caracterizado como efeito de a cuDNN escolher algoritmos
+diferentes para lote 1 (serviço) e lote 128 (`avaliar_t04_corpus.py`).
+
+**RNF01 remedido**, pelo caminho real da interface:
+
+| | Sem T04 | Com T04 |
+|---|---|---|
+| T01 | 4,56 s | 4,56 s |
+| T02 | 14,00 s | 13,89 s |
+| T03 | 0,08 s | 0,08 s |
+| T04 | — | **1,50 s** |
+| **Total** | 18,84 s | **20,03 s** |
+
+Margem de 9,97 s contra o teto de 30 s. O custo de T04 é de cerca de 1,9 s, e
+não há disputa de GPU com T02 em regime.
+
+Uma medição intermediária expôs um defeito que a decisão original não previa: a
+**primeira** análise depois de a interface subir custava 40,5 s — acima do teto
+—, por criação do contexto CUDA. Corrigido com uma inferência de aquecimento na
+carga (`DetectionService._aquecer`), que traz a primeira imagem para 20,0 s.
+
+**O que não muda:** a razão nº 2 acima continua valendo. T04 mede 0,53 neste
+corpus, e a caixa na tela exibe ruído. O que se ganha é demonstrabilidade da
+arquitetura de quatro fontes, com uma fonte fraca real em vez de simulada — e a
+tela passa a corresponder ao que o Capítulo 4 descreve. A leitura do número
+exibido deve vir acompanhada dessa ressalva.
+
+O serviço é **opcional e desligado por padrão**: sem `TCC3_T04_SERVICO=1`, T04
+volta a se declarar indisponível exatamente como antes.
 
 O modo de escores pré-extraídos existe justamente para separar os dois usos: a
 campanha experimental liga T04 por `TCC3_T04_ESCORES`, e a interface, que recebe

@@ -62,6 +62,29 @@ from .base import BaseTechnique, TechniqueError
 
 COMPONENTS = ("perspective_fields", "line_segment", "object_shadow")
 
+# ---------------------------------------------------------------------------
+# Servico residente no WSL2
+# ---------------------------------------------------------------------------
+# Ate 30/08/2026 T04 so pontuava imagens do corpus, por escores pre-extraidos.
+# A interface, que recebe imagens arbitrarias, reportava indisponibilidade.
+#
+# O servico (``scripts/wsl/servico_t04.py``) mantem os tres extratores
+# residentes no WSL2 e pontua uma imagem qualquer sob demanda. Sao **dois**
+# processos porque a extracao em lote nao usou o mesmo dispositivo para as tres
+# representacoes, e o PointNet dos autores exige CUDA_VISIBLE_DEVICES=""
+# no processo inteiro; o cabecalho do servico detalha.
+#
+# Paridade medida contra os escores da dissertacao: campos e retas exatos ate
+# 1e-16; objeto-sombra em 2,3e-04, residuo de cuDNN com lote 1 contra lote 128.
+SERVICE_ENDPOINTS = {
+    "http://127.0.0.1:8404": ("object_shadow",),
+    "http://127.0.0.1:8405": ("perspective_fields", "line_segment"),
+}
+# Desligado por padrao: o servico e opcional e T04 volta a se declarar
+# indisponivel sem ele, exatamente como antes. TCC3_T04_SERVICO=1 liga.
+SERVICE_ENABLED = os.environ.get("TCC3_T04_SERVICO", "") not in ("", "0", "false")
+SERVICE_TIMEOUT = int(os.environ.get("TCC3_T04_SERVICO_TIMEOUT", "120"))
+
 # Escores de objeto-sombra ja extraidos, ativados **explicitamente** por
 # TCC3_T04_ESCORES.
 #
@@ -89,6 +112,8 @@ class T04ProjectiveGeometry(BaseTechnique):
         aggregation: str = "mean",
         timeout: int = 3600,
         precomputed: Path | None = None,
+        service_enabled: bool | None = None,
+        service_timeout: int | None = None,
     ) -> None:
         super().__init__(device=device)
         self.external = external
@@ -97,6 +122,10 @@ class T04ProjectiveGeometry(BaseTechnique):
         self.aggregation = aggregation
         self.timeout = timeout
         self.precomputed = Path(precomputed) if precomputed else DEFAULT_PRECOMPUTED
+        self.service_enabled = (SERVICE_ENABLED if service_enabled is None
+                                else service_enabled)
+        self.service_timeout = (SERVICE_TIMEOUT if service_timeout is None
+                                else service_timeout)
         self.last_component_scores_: dict[str, np.ndarray] = {}
         self._precomputed_cache: dict[str, float] | None = None
         self._fitted = True
@@ -151,6 +180,24 @@ class T04ProjectiveGeometry(BaseTechnique):
     # ------------------------------------------------------------------
 
     def is_available(self) -> tuple[bool, str]:
+        # Caminho do servico residente, que tem precedencia: e o unico que
+        # pontua uma imagem arbitraria, e por isso o unico que serve a
+        # interface. Os escores pre-extraidos cobrem apenas o corpus.
+        if self.service_enabled:
+            vivos, ausentes = self._sondar_servico()
+            if vivos and not ausentes:
+                return True, (
+                    "completa: as tres representacoes, pelo servico residente "
+                    "no WSL2 (portas 8404 e 8405)"
+                )
+            if vivos:
+                return True, (
+                    f"parcial: {', '.join(sorted(vivos))} pelo servico residente; "
+                    f"sem resposta em {', '.join(ausentes)}"
+                )
+            # Nenhum endpoint responde: cai para os caminhos abaixo, que e o
+            # comportamento anterior ao servico existir.
+
         # Caminho dos escores pre-extraidos. Uma das tres representacoes --
         # objeto-sombra -- deixou de estar bloqueada: o SSISv2 roda no WSL2
         # (docs/T04_AMBIENTE_WSL2.md) e seus mapas ja foram extraidos para o
@@ -215,6 +262,14 @@ class T04ProjectiveGeometry(BaseTechnique):
             raise TechniqueError(f"T04 indisponivel: {reason}")
 
         paths = [Path(p).resolve() for p in paths]
+
+        # O servico pontua imagem arbitraria; os demais caminhos, nao. Quando
+        # ele esta de pe, e ele que responde.
+        if self.service_enabled:
+            vivos, _ = self._sondar_servico()
+            if vivos:
+                return self._extrair_pelo_servico(paths)
+
         columns = []
         failures = []
         for component in self.components:
@@ -232,6 +287,87 @@ class T04ProjectiveGeometry(BaseTechnique):
 
         self.last_component_scores_ = {
             component: matrix[:, index] for index, component in enumerate(self.components)
+        }
+        return matrix
+
+    # ------------------------------------------------------------------
+    # Cliente do servico residente
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _para_wsl(caminho: Path) -> str:
+        """``C:\\Users\\...`` -> ``/mnt/c/Users/...``.
+
+        Mesma conversao que os extratores em lote aplicam. O servico vive no
+        WSL2 e enxerga o disco do Windows por ``/mnt``.
+        """
+        texto = str(caminho).replace("\\", "/")
+        if len(texto) > 1 and texto[1] == ":":
+            return f"/mnt/{texto[0].lower()}{texto[2:]}"
+        return texto
+
+    def _sondar_servico(self) -> tuple[set[str], list[str]]:
+        """(representacoes vivas, endpoints sem resposta).
+
+        Barato de proposito: ``is_available`` e chamada a cada carga da
+        interface, e um endpoint fora do ar nao pode custar segundos.
+        """
+        import urllib.error
+        import urllib.request
+
+        vivas: set[str] = set()
+        ausentes: list[str] = []
+        for base, esperadas in SERVICE_ENDPOINTS.items():
+            try:
+                with urllib.request.urlopen(f"{base}/saude", timeout=2) as resposta:
+                    saude = json.loads(resposta.read())
+                vivas.update(saude.get("representacoes", esperadas))
+            except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+                ausentes.append(base)
+        return vivas, ausentes
+
+    def _pontuar_pelo_servico(self, caminho: Path) -> dict:
+        """Consulta os dois endpoints e funde as respostas."""
+        import urllib.request
+
+        fundido: dict = {}
+        alvo = self._para_wsl(caminho)
+        for base in SERVICE_ENDPOINTS:
+            pedido = urllib.request.Request(
+                f"{base}/escore",
+                data=json.dumps({"caminho": alvo}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST")
+            try:
+                with urllib.request.urlopen(pedido, timeout=self.service_timeout) as r:
+                    fundido.update(json.loads(r.read()))
+            except Exception as erro:                       # noqa: BLE001
+                # Um endpoint fora nao invalida o outro: as representacoes que
+                # ele serviria ficam NaN e o nanmean as ignora (RN07).
+                fundido.setdefault("falhas", {})[base] = f"{type(erro).__name__}: {erro}"
+        return fundido
+
+    def _extrair_pelo_servico(self, paths: Sequence[Path]) -> np.ndarray:
+        """Matriz (n, 3) pelo servico residente, na ordem de ``self.components``."""
+        matrix = np.full((len(paths), len(self.components)), np.nan, dtype=np.float64)
+        falhas: list[str] = []
+
+        for linha, caminho in enumerate(paths):
+            resposta = self._pontuar_pelo_servico(caminho)
+            for coluna, componente in enumerate(self.components):
+                valor = resposta.get(componente)
+                if valor is not None:
+                    matrix[linha, coluna] = float(valor)
+            if resposta.get("falhas"):
+                falhas.append(f"{caminho.name}: {resposta['falhas']}")
+
+        if np.isnan(matrix).all():
+            raise TechniqueError(
+                "T04: o servico nao produziu nenhum escore\n" + "\n".join(falhas[:5]))
+
+        self.last_component_scores_ = {
+            componente: matrix[:, indice]
+            for indice, componente in enumerate(self.components)
         }
         return matrix
 
