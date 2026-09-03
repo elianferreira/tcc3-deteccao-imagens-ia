@@ -62,6 +62,10 @@ def main() -> int:
     parser.add_argument("--escores", type=Path,
                         default=RESULTS_DIR / "t04_escores_componentes.csv")
     parser.add_argument("--split", default="test")
+    parser.add_argument("--sufixo", default="",
+                        help="sufixo dos arquivos de saida, p.ex. _ood; sem ele, uma "
+                             "rodada sobre outro corpus sobrescreve em silencio os "
+                             "numeros da rodada padrao, que sao os da dissertacao")
     args = parser.parse_args()
 
     if not args.escores.exists():
@@ -126,7 +130,7 @@ def main() -> int:
           f"({completas / len(tabela):.1%})")
     saida["n_com_todas"] = int(completas)
 
-    destino = RESULTS_DIR / f"t04_componentes_{args.split}.json"
+    destino = RESULTS_DIR / f"t04_componentes_{args.split}{args.sufixo}.json"
     destino.write_text(json.dumps(saida, indent=2, ensure_ascii=False), encoding="utf-8")
 
     linhas = [{"representacao": nome, "n": m.get("n_samples"),
@@ -141,7 +145,7 @@ def main() -> int:
                        "acuracia": saida["agregado"]["accuracy"],
                        "fpr": saida["agregado"]["fpr"]})
     pd.DataFrame(linhas).to_csv(
-        RESULTS_DIR / f"t04_componentes_{args.split}.csv", index=False)
+        RESULTS_DIR / f"t04_componentes_{args.split}{args.sufixo}.csv", index=False)
 
     print(f"Gravado em {destino.name}")
     print("=" * 78)

@@ -1,0 +1,65 @@
+{
+  "executado_em": "2026-08-31T11:38:01",
+  "pesos": "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\weights\\t01_cooccurrence.pt",
+  "limiar": 0.5,
+  "dispositivo": "cuda",
+  "amostra": "data\\corvi2024_30k_norm\\real",
+  "resumo": [
+    {
+      "fonte": "coco",
+      "n": 30000,
+      "falsos_positivos": 281,
+      "fpr": 0.009366666666666667,
+      "ic95_baixo": 0.0083377018491426,
+      "ic95_alto": 0.010521269863333044,
+      "mediana": 5.916160262131598e-06,
+      "media": 0.012088125971768789,
+      "p25": 4.3335037780423136e-08,
+      "p75": 0.0002108103763021063,
+      "ms_por_imagem": 9.986064599999999,
+      "condicao": "ok"
+    },
+    {
+      "fonte": "coco/split=train",
+      "n": 21000,
+      "falsos_positivos": 39,
+      "fpr": 0.0018571428571428571,
+      "ic95_baixo": 0.001358896305454082,
+      "ic95_alto": 0.0025376099412888946,
+      "mediana": 5.9702595081034815e-06,
+      "media": 0.004589782087727817,
+      "p25": 4.14833403183934e-08,
+      "p75": 0.00019571668963180855,
+      "ms_por_imagem": NaN,
+      "condicao": "recorte do manifesto"
+    },
+    {
+      "fonte": "coco/split=val",
+      "n": 4500,
+      "falsos_positivos": 137,
+      "fpr": 0.030444444444444444,
+      "ic95_baixo": 0.025811295511596007,
+      "ic95_alto": 0.03587861827222801,
+      "mediana": 5.577052206717781e-06,
+      "media": 0.03181494829815105,
+      "p25": 4.935092690061538e-08,
+      "p75": 0.0002496679007890634,
+      "ms_por_imagem": NaN,
+      "condicao": "recorte do manifesto"
+    },
+    {
+      "fonte": "coco/split=test",
+      "n": 4500,
+      "falsos_positivos": 105,
+      "fpr": 0.023333333333333334,
+      "ic95_baixo": 0.01931234616595579,
+      "ic95_alto": 0.02816747639263509,
+      "mediana": 5.813340067106765e-06,
+      "media": 0.027353575104244403,
+      "p25": 4.521255458911355e-08,
+      "p75": 0.00025561269285390154,
+      "ms_por_imagem": NaN,
+      "condicao": "recorte do manifesto"
+    }
+  ]
+}

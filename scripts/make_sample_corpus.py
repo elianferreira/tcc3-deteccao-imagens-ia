@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +33,28 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.config import ALL_GENERATORS, IMAGE_SIZE, REAL_SOURCES   # noqa: E402
+
+
+# Nome do arquivo que marca um diretorio como corpus sintetico de teste.
+# Quem for medir qualquer coisa deve checar por ele: em 31/08/2026 duas
+# medicoes trataram as pastas real/fodb, real/imagenet, real/open_images e
+# real/raise deste corpus como fontes reais, porque os nomes das pastas sao
+# os mesmos das fontes declaradas em REAL_SOURCES.
+MARCADOR = "AVISO_CORPUS_SINTETICO.txt"
+
+TEXTO_MARCADOR = """CORPUS SINTETICO -- NAO E DADO REAL
+
+As imagens deste diretorio foram GERADAS por scripts/make_sample_corpus.py.
+As pastas em real/ contem texturas de ruido 1/f; as pastas em fake/ contem
+texturas com artefato periodico plantado. Nenhuma delas e uma fotografia, e
+nenhuma vem da fonte cujo nome a pasta carrega.
+
+Este corpus serve APENAS a verificacao funcional do codigo. Metricas obtidas
+sobre ele NAO tem valor cientifico e NAO devem ser reportadas na monografia.
+
+Gerado em: {quando}
+Parametros: --per-class {per_class} --size {size} --seed {seed} --strength {strength}
+"""
 
 
 def pink_noise_image(rng: np.random.Generator, size: int) -> np.ndarray:
@@ -110,7 +133,18 @@ def main() -> int:
             array = synthetic_artifact_image(rng, args.size, args.strength)
             Image.fromarray(array).save(directory / f"{generator}_{index:05d}.png")
 
+    # O marcador e a defesa contra confundir este corpus com dado real.
+    (output / MARCADOR).write_text(
+        TEXTO_MARCADOR.format(
+            quando=datetime.now().isoformat(timespec="seconds"),
+            per_class=args.per_class, size=args.size,
+            seed=args.seed, strength=args.strength,
+        ),
+        encoding="utf-8",
+    )
+
     print(f"\nCorpus de amostra gravado em {output}")
+    print(f"  marcador de aviso: {output / MARCADOR}")
     print("\nProximos passos:")
     print(f"  python scripts/prepare_dataset.py --corpus {output}")
     print("  python scripts/run_experiments.py --protocol standard --techniques T01 T03 T05 --fit")

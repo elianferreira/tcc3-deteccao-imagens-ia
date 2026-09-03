@@ -6,8 +6,8 @@ REM Responde a pergunta em aberto do docs/ESTADO_ATUAL.md: T04 fica em
 REM acaso por causa do corpus inteiro, ou so por causa do latent_diffusion
 REM de 256 px do split padrao?
 REM
-REM Alvo: split "test" de data/manifesto30k_ood.csv -- 13.788 imagens,
-REM 11 geradores modernos (SDXL, Midjourney v5/v6.1, DALL-E 2/3, Firefly,
+REM Alvo: split "test" de data/manifesto30k_ood.csv -- 14.788 imagens,
+REM 12 geradores modernos (SDXL, Midjourney v5/v6.1, DALL-E 2/3, Firefly,
 REM Flux, GigaGAN, SD 1.3/1.4/2/3) mais 3.150 reais.
 REM
 REM -------------------------------------------------------------------
@@ -69,19 +69,25 @@ exit /b 1
 :sombra
 echo === objeto-sombra (GPU) ===
 wsl -d Ubuntu-24.04 -u root -- bash -c "cd /root/SSIS/demo && /root/geo/bin/python %RAIZ%/scripts/wsl/extrair_object_shadow_ssis.py --manifesto %MANIFESTO% --split test --saida %RAIZ%/data/t04_object_shadow --conjunto %CONJUNTO%" >> logs\t04_bench_sombra.log 2>> logs\t04_bench_sombra.err
-echo >>> objeto-sombra: codigo %ERRORLEVEL%
-if not "%ETAPA%"=="todas" exit /b %ERRORLEVEL%
+set COD=%ERRORLEVEL%
+echo [%DATE% %TIME%] objeto-sombra: codigo %COD% >>logs\t04_bench_status.log
+echo objeto-sombra: codigo %COD%
+if not "%ETAPA%"=="todas" exit /b %COD%
 
 :campos
 echo === campos de perspectiva (CPU) ===
 wsl -d Ubuntu-24.04 -u root -- bash -c "cd /root && CUDA_VISIBLE_DEVICES='' /root/geo/bin/python %RAIZ%/scripts/wsl/extrair_perspective_fields.py --manifesto %MANIFESTO% --split test --saida %RAIZ%/data/t04_perspective_fields --conjunto %CONJUNTO% --dispositivo cpu" >> logs\t04_bench_campos.log 2>> logs\t04_bench_campos.err
-echo >>> campos: codigo %ERRORLEVEL%
-if not "%ETAPA%"=="todas" exit /b %ERRORLEVEL%
+set COD=%ERRORLEVEL%
+echo [%DATE% %TIME%] campos: codigo %COD% >>logs\t04_bench_status.log
+echo campos: codigo %COD%
+if not "%ETAPA%"=="todas" exit /b %COD%
 
 :retas
 echo === segmentos de reta (CPU) ===
 wsl -d Ubuntu-24.04 -u root -- bash -c "cd /root/DeepLSD && CUDA_VISIBLE_DEVICES='' /root/geo/bin/python %RAIZ%/scripts/wsl/extrair_line_segments.py --manifesto %MANIFESTO% --split test --saida %RAIZ%/data/t04_line_segments --conjunto %CONJUNTO% --dispositivo cpu" >> logs\t04_bench_retas.log 2>> logs\t04_bench_retas.err
-echo >>> retas: codigo %ERRORLEVEL%
+set COD=%ERRORLEVEL%
+echo [%DATE% %TIME%] retas: codigo %COD% >>logs\t04_bench_status.log
+echo retas: codigo %COD%
 
 echo.
 echo ===================================================================
