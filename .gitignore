@@ -59,3 +59,14 @@ logs/
 # Sistema -------------------------------------------------------------------
 .DS_Store
 Thumbs.db
+
+# Editor --------------------------------------------------------------------
+# O .vscode/ E versionado de proposito: launch.json carrega as variaveis de
+# ambiente sem as quais a interface troca de modelo de fusao em silencio, e
+# tasks.json guarda a ordem de subida dos servicos T04. Sao conhecimento do
+# projeto, nao preferencia pessoal. Ficam de fora so os arquivos que o proprio
+# VS Code gera por maquina.
+.vscode/*.log
+.vscode/chrome-debug-profile/
+.vscode/.ropeproject/
+.idea/

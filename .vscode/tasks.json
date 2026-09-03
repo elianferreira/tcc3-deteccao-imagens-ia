@@ -1,0 +1,86 @@
+{
+  // Tarefas do TCC 3. Ctrl+Shift+P -> "Tasks: Run Task".
+  //
+  // A primeira tarefa e a que mais importa: os servicos T04 do WSL2 precisam
+  // estar no ar ANTES da interface, senao a T04 se declara indisponivel pela
+  // sessao inteira e a tela troca de modelo de fusao sem avisar.
+  //
+  // Os servicos sao lancados com Start-Process pelo lado Windows de proposito:
+  // processo lancado de dentro do wsl.exe nao sobrevive ao retorno da chamada,
+  // nem com setsid nem com nohup (armadilha 12 do ESTADO_ATUAL.md).
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "T04: subir servicos (WSL2)",
+      "detail": "Sobe as portas 8404 (objeto-sombra, GPU) e 8405 (campos e retas, CPU). RODE ANTES DA INTERFACE.",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}" },
+      "command": "powershell",
+      "args": [
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/.vscode/subir_servicos_t04.ps1"
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "T04: conferir servicos",
+      "detail": "Mostra se 7860/8404/8405 respondem e ha quanto tempo os servicos estao vivos.",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}" },
+      "command": "powershell",
+      "args": [
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+        "Get-NetTCPConnection -State Listen -EA SilentlyContinue | Where-Object { $_.LocalPort -in 7860,8404,8405 } | Format-Table LocalPort,OwningProcess -AutoSize; wsl -d Ubuntu-24.04 -u root -- bash -c \"ps -eo etime,cmd | grep servico_t04 | grep -v grep\""
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "T04: parar servicos",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}" },
+      "command": "wsl",
+      "args": [
+        "-d", "Ubuntu-24.04", "-u", "root", "--",
+        "bash", "-c", "pkill -f servico_t04.py && echo parados || echo 'nenhum servico rodando'"
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Compilar tudo (armadilha 1)",
+      "detail": "python -m compileall. A armadilha 1 diz para rodar isto antes de qualquer rodada longa: um SyntaxError ja custou 12 h de janela.",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}" },
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "compileall", "-q", "scripts", "src", "app", "tests"],
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Testes: suite completa",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}" },
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "pytest", "-q"],
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Estado: o que esta vivo",
+      "detail": "Processos Python, portas em escuta e extratores do WSL2. Rode ao retomar o trabalho: 'pronto' pode significar terminado OU morto.",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}" },
+      "command": "powershell",
+      "args": [
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+        "Get-CimInstance Win32_Process -Filter \"Name like '%python%'\" | Select-Object ProcessId,CommandLine | Format-List; Get-NetTCPConnection -State Listen -EA SilentlyContinue | Where-Object { $_.LocalPort -in 7860,8404,8405 } | Format-Table LocalPort,OwningProcess -AutoSize; wsl -d Ubuntu-24.04 -u root -- bash -c \"ps -eo etime,cmd | grep -E 'extrair_|servico_t04' | grep -v grep\""
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ]
+}

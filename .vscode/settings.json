@@ -1,0 +1,53 @@
+{
+  // Interpretador do projeto. Sem isto o VS Code escolhe o Python do sistema,
+  // que nao tem torch nem gradio, e tudo falha na importacao.
+  "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+
+  // Os testes ja estao configurados em pytest.ini; aqui so se liga o painel.
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": ["tests"],
+
+  // O projeto importa como `src.x` e `scripts.y` a partir da raiz.
+  "python.analysis.extraPaths": ["${workspaceFolder}"],
+  "python.analysis.typeCheckingMode": "basic",
+
+  // Diretorios pesados. Sem excluir, a indexacao varre 192.638 imagens do
+  // corpus e os pesos de terceiros, e a janela trava por minutos.
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true
+  },
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/data/**": true,
+    "**/weights/**": true,
+    "**/weights_*/**": true,
+    "**/external/**": true,
+    "**/results/**": true,
+    "**/logs/**": true
+  },
+  "search.exclude": {
+    "**/.venv": true,
+    "**/data": true,
+    "**/weights": true,
+    "**/weights_*": true,
+    "**/external": true,
+    "**/results/scores": true,
+    "**/results/probabilidades": true,
+    "**/logs": true
+  },
+  "python.analysis.exclude": [
+    "**/.venv/**",
+    "**/data/**",
+    "**/external/**"
+  ],
+
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "[python]": {
+    "editor.rulers": [88],
+    "editor.tabSize": 4
+  },
+  "files.encoding": "utf8",
+  "files.trimTrailingWhitespace": true
+}

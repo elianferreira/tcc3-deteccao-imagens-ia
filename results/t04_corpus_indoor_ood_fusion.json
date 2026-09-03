@@ -1,0 +1,26 @@
+{
+  "corpus": "corvi2024 (deste trabalho)",
+  "pesos": "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\weights\\projective_geometry\\object_shadow\\ShadowObject_indoor.pth",
+  "observacao": "classificador oficial aplicado sem reajuste; treinado em Kandinsky, avaliado em Corvi et al. (2024)",
+  "splits": {
+    "fusion": {
+      "n_samples": 2350.0,
+      "accuracy": 0.5242553191489362,
+      "f1": 0.1346749226006192,
+      "auc": 0.5785466666666667,
+      "tn": 1145.0,
+      "fp": 205.0,
+      "fn": 913.0,
+      "tp": 87.0,
+      "fpr": 0.15185185185185185,
+      "fnr": 0.913,
+      "precision": 0.2979452054794521,
+      "recall": 0.087,
+      "frac_vazios": 0.4685106382978723,
+      "frac_vazios_real": 0.3237037037037037,
+      "frac_vazios_gen": 0.664,
+      "auc_pares_com_conteudo": 0.5382618134877171,
+      "n_pares_com_conteudo": 1249
+    }
+  }
+}

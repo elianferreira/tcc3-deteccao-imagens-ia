@@ -173,7 +173,7 @@ histórico e sem cópia remota.
 
 ## Resumo das lacunas, por prioridade
 
-Situação em 18/08/2026.
+Situação em 30/08/2026.
 
 | # | Lacuna | Etapa | Estado |
 |---|---|---|---|
@@ -184,8 +184,8 @@ Situação em 18/08/2026.
 | 5 | Repositório Git | 7 | ✓ github.com/elianferreira/tcc3-deteccao-imagens-ia |
 | 6 | Verificação contra AUC publicada | 3 | ~ T02 conferida (+6,1 p.p. em resolução nativa); T04 contra figura, não tabela |
 | 7 | RNF01 em CPU, 1.000 imagens | 3 | ✓ as quatro medidas; soma 17,871 s contra limite de 30 s |
-| 8 | T04 completa | 2 | ~ os **tres** extratores rodam; resultado negativo (0,5333) e fora da interface |
-| 9 | Escala integral | 1 | ~ corpus de 192.638 montado e manifestos prontos; campanha **decidida como nao executar** |
+| 8 | T04 completa | 2 | ~ os **tres** extratores rodam; resultado negativo (0,5333); **na interface desde 30/08** por servico residente no WSL2 (RNF01 20,0 s) |
+| 9 | Escala integral | 1 | ~ corpus de 192.638 montado e manifestos prontos; campanha **planejada como trabalho futuro** (a decisao de 16/08 de nao executar foi reaberta em 30/08) |
 
 ### Detalhamento do que ficou parcial
 
