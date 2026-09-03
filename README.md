@@ -46,13 +46,13 @@ pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorc
 ### Repositórios oficiais de T02 e T04
 
 ```bash
-python scripts/setup_external.py --create-venvs
+python automacao/setup_external.py --create-venvs
 ```
 
 T02 e T04 rodam em **subprocesso**, sobre ambientes virtuais próprios: o SPAI
 exige Python 3.11 + CUDA 12.4, incompatível com o ambiente principal. Os pesos
 pré-treinados exigem download manual — o script imprime os endereços ao final.
-O contrato de integração está em [`external/CONTRATO.md`](external/CONTRATO.md).
+O contrato de integração está em [`externo/CONTRATO.md`](externo/CONTRATO.md).
 
 ---
 
@@ -64,9 +64,9 @@ O dataset de Corvi et al. tem 360.000 imagens. Para exercitar todo o fluxo antes
 de baixá-lo:
 
 ```bash
-python scripts/make_sample_corpus.py --output data/amostra --per-class 200
-python scripts/prepare_dataset.py --corpus data/amostra --expected-size 256
-python scripts/run_experiments.py --protocol standard --techniques T01 T03 T05 --fit
+python automacao/make_sample_corpus.py --output data/amostra --per-class 200
+python automacao/prepare_dataset.py --corpus data/amostra --expected-size 256
+python automacao/run_experiments.py --protocol standard --techniques T01 T03 T05 --fit
 ```
 
 > As métricas obtidas sobre o corpus de amostra **não têm valor científico** e
@@ -84,10 +84,10 @@ data/corvi2024/
 
 ```bash
 # Protocolo padrão: particionamento estratificado 70/15/15
-python scripts/prepare_dataset.py --corpus data/corvi2024
+python automacao/prepare_dataset.py --corpus data/corvi2024
 
 # Protocolo OOD: treino em difusão, teste em GigaGAN e Midjourney
-python scripts/prepare_dataset.py --corpus data/corvi2024 --protocol ood
+python automacao/prepare_dataset.py --corpus data/corvi2024 --protocol ood
 ```
 
 A verificação de integridade confere contagem por classe e por gerador,
@@ -98,26 +98,26 @@ relatório vai para `data/integridade_<protocolo>.json`.
 
 ```bash
 # Protocolo padrão, treinando T01, T03 e T05
-python scripts/run_experiments.py --protocol standard --fit
+python automacao/run_experiments.py --protocol standard --fit
 
 # Generalização a geradores não vistos
-python scripts/run_experiments.py --protocol ood --manifest data/manifesto_ood.csv --fit
+python automacao/run_experiments.py --protocol ood --manifest data/manifesto_ood.csv --fit
 
 # Robustez: 9 perturbações sobre subamostra do teste
-python scripts/run_experiments.py --protocol robustness --limit 2000
+python automacao/run_experiments.py --protocol robustness --limit 2000
 
 # Três inicializações de T01 (sementes 42, 123 e 456)
-python scripts/run_experiments.py --protocol standard --multi-seed
+python automacao/run_experiments.py --protocol standard --multi-seed
 ```
 
-Saídas em `results/`: métricas agregadas e por gerador em CSV, probabilidades
+Saídas em `resultados/`: métricas agregadas e por gerador em CSV, probabilidades
 brutas em `.npy` (para curvas ROC, teste de DeLong e análise de erros sem
 repetir a inferência) e figuras em PDF/PNG.
 
 ### 4. Interface demonstrativa (Etapa 6)
 
 ```bash
-python app/gradio_app.py
+python interface/gradio_app.py
 ```
 
 Aceita PNG, JPEG e WebP até 10 MB. Exibe o escore de cada técnica em percentual
@@ -128,36 +128,52 @@ interpretação cabe ao usuário (RN04).
 
 ```bash
 pytest                              # todos
-pytest tests/test_unit_features.py  # unitários
-pytest tests/test_interface.py      # interface e regras de negócio
+pytest testes/test_unit_features.py  # unitários
+pytest testes/test_interface.py      # interface e regras de negócio
 ```
 
 ---
 
 ## Estrutura
 
+Mapa completo e o porquê de cada escolha em
+[`documentacao/ESTRUTURA.md`](documentacao/ESTRUTURA.md).
+
 ```
-src/
-  config.py            constantes experimentais e hiperparâmetros
-  seeds.py             determinismo (RNF02)
-  metrics.py           AUC, acurácia, F1, FPR/FNR, DeLong, bootstrap
-  plots.py             curvas ROC, AUC por gerador, heatmap de robustez
-  data/
-    manifest.py        indexação, verificação de integridade, particionamento
-    perturbations.py   grade do protocolo de robustez
-  techniques/
-    base.py            interface fit / predict_proba / score
-    t01_..t05_*.py     as cinco técnicas
-  experiments/
-    runner.py          orquestração dos três protocolos
-app/gradio_app.py      interface demonstrativa
-scripts/               preparação, execução e setup dos repositórios externos
-tests/                 unitários, integração, interface, desempenho
+codigo/                          o pacote importável
+  configuracao.py                constantes experimentais e hiperparâmetros
+  sementes.py                    determinismo (RNF02)
+  metricas.py                    AUC, acurácia, F1, FPR/FNR, DeLong, bootstrap
+  graficos.py                    curvas ROC, AUC por gerador, heatmap de robustez
+  preprocessamento/              tudo que acontece ANTES das técnicas
+    validacao_envio.py           formato e tamanho (RN01, RN02)
+    normalizacao.py              256 px, LANCZOS, recorte central, PNG
+    envio_interface.py           a política de resolução por técnica
+    perturbacoes.py              grade do protocolo de robustez
+  tecnicas/                      uma pasta por técnica
+    base.py                      interface fit / predict_proba / score
+    t01_coocorrencia/            cada pasta traz a ficha da técnica no
+    t02_spai/                    __init__.py -- o que mede, em que resolução
+    t03_benford/                 foi medida, resultado e fragilidade -- e a
+    t04_geometria/               implementação em tecnica.py
+    t05_fusao/
+  corpus/
+    manifesto.py                 indexação, integridade, particionamento
+  experimentos/
+    runner.py                    orquestração dos três protocolos
+interface/gradio_app.py          interface demonstrativa
+automacao/                       scripts de preparação, execução e extração
+  wsl/                           os extratores e serviços de T04 no WSL2
+testes/                          unitários, integração, interface, desempenho
+documentacao/                    o registro do trabalho
+data/                            o corpus (fora do versionamento; ver ESTRUTURA.md
+                                 para por que o nome não foi traduzido)
+pesos/  resultados/  externo/    modelos, saídas medidas, repositórios oficiais
 ```
 
 ### Decisões de projeto que valem registro na monografia
 
-> **Leia [`docs/DECISOES_METODOLOGICAS.md`](docs/DECISOES_METODOLOGICAS.md).**
+> **Leia [`documentacao/DECISOES_METODOLOGICAS.md`](documentacao/DECISOES_METODOLOGICAS.md).**
 > Reúne as alterações metodológicas introduzidas durante a execução que **não**
 > constavam do projeto aprovado no TCC 2, cada uma com o motivo, a evidência
 > empírica que a exigiu e o impacto sobre a leitura dos resultados. Todas
@@ -208,19 +224,19 @@ distintas — verificado por teste automatizado.
 
 | Arquivo | Situação |
 |---|---|
-| `weights/t01_cooccurrence.pt` | ✓ versionado (2,8 MB) |
-| `weights/t05_fusion.pkl` | ✓ versionado, variantes A e B |
-| `weights/t03_benford.pkl` | ✗ **não versionado** — 337 MB, acima do limite de 100 MB por arquivo do GitHub |
-| `weights/spai.pth` | ✗ artefato oficial de terceiros (891 MB) |
-| `weights/projective_geometry/` | ✗ artefato oficial de terceiros |
+| `pesos/t01_cooccurrence.pt` | ✓ versionado (2,8 MB) |
+| `pesos/t05_fusion.pkl` | ✓ versionado, variantes A e B |
+| `pesos/t03_benford.pkl` | ✗ **não versionado** — 337 MB, acima do limite de 100 MB por arquivo do GitHub |
+| `pesos/spai.pth` | ✗ artefato oficial de terceiros (891 MB) |
+| `pesos/projective_geometry/` | ✗ artefato oficial de terceiros |
 
 O modelo de T03 é integralmente regenerável:
 
 ```powershell
-python scripts/run_experiments.py --protocol standard --fit --techniques T03
+python automacao/run_experiments.py --protocol standard --fit --techniques T03
 ```
 
-Os pesos oficiais de T02 e T04 são obtidos por `scripts/setup_external.py`;
+Os pesos oficiais de T02 e T04 são obtidos por `automacao/setup_external.py`;
 redistribuí-los aqui seria indevido.
 
 ## Ambiente

@@ -1,18 +1,18 @@
 # Corpus e downloads --------------------------------------------------------
 # O dataset de Corvi et al. (2024) e o benchmark sao publicos e reproduzíveis
-# por scripts/download_dataset.py; versiona-los aqui seria inviavel (dezenas de
+# por automacao/download_dataset.py; versiona-los aqui seria inviavel (dezenas de
 # gigabytes) e desnecessario.
-data/
+/data/
 
 # Repositorios oficiais de terceiros ----------------------------------------
-# Clonados por scripts/setup_external.py, com licencas proprias.
-external/
+# Clonados por automacao/setup_external.py, com licencas proprias.
+externo/
 
 # CONTRATO.md e documento autoral deste trabalho, nao codigo de terceiros: a
-# tabela de documentos em docs/ESTADO_ATUAL.md o lista e
+# tabela de documentos em documentacao/ESTADO_ATUAL.md o lista e
 # docs/DECISOES_METODOLOGICAS.md aponta para ele. Sem esta excecao o link
 # quebra em qualquer clone.
-!external/CONTRATO.md
+!externo/CONTRATO.md
 
 # Ambiente virtual ----------------------------------------------------------
 .venv/
@@ -25,32 +25,32 @@ __pycache__/
 # localmente" -- T01, T03 e T05, todos abaixo de 30 MB. Os pesos de TERCEIROS
 # ficam de fora: sao redistribuicao de artefatos oficiais, e spai.pth tem
 # 891 MB, muito acima do limite de 100 MB por arquivo do GitHub.
-weights/spai.pth
-weights/mfm_pretrain_vit_base.pth
-weights/projective_geometry/
-weights/backup_22k_confundido/
+pesos/spai.pth
+pesos/mfm_pretrain_vit_base.pth
+pesos/projective_geometry/
+pesos/backup_22k_confundido/
 
 # t03_benford.pkl fica de fora por tamanho, nao por escolha: o Random Forest
 # ajustado sobre ~60.000 amostras ocupa 337 MB, acima do limite de 100 MB por
 # arquivo do GitHub. E integralmente regeneravel:
 #   python scripts/run_experiments.py --protocol standard --fit --techniques T03
 # A limitacao esta declarada no README.
-weights/t03_benford.pkl
+pesos/t03_benford.pkl
 
 # Diretorios de variante (TCC3_WEIGHTS_DIR) ---------------------------------
 # Execucoes que nao podem sobrescrever o protocolo padrao gravam em diretorio
 # proprio -- weights_ood_familias/, weights_t04_fusao/. Eles sao area de
 # trabalho: contem copias e links dos pesos de terceiros ja excluidos acima.
-# O modelo pequeno que cada variante produz e copiado de volta para weights/
+# O modelo pequeno que cada variante produz e copiado de volta para pesos/
 # com sufixo proprio, e esse sim e versionado (ver Etapa 7).
-weights_*/
+pesos_*/
 
 # Resultados pesados --------------------------------------------------------
 # Metricas em CSV/JSON e figuras sao versionadas; vetores de escores brutos
 # (~70 KB cada, dezenas de arquivos) sao regeneraveis pela campanha.
-results/scores/
-results/probabilidades/
-results/logs_t02/
+resultados/scores/
+resultados/probabilidades/
+resultados/logs_t02/
 
 # Execucao ------------------------------------------------------------------
 logs/

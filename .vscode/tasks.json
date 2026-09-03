@@ -54,7 +54,7 @@
       "type": "shell",
       "options": { "cwd": "${workspaceFolder}" },
       "command": "${workspaceFolder}/.venv/Scripts/python.exe",
-      "args": ["-m", "compileall", "-q", "scripts", "src", "app", "tests"],
+      "args": ["-m", "compileall", "-q", "automacao", "codigo", "interface", "testes"],
       "group": "build",
       "problemMatcher": [],
       "presentation": { "reveal": "always", "panel": "shared" }

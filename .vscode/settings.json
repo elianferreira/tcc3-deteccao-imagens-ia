@@ -21,10 +21,10 @@
   "files.watcherExclude": {
     "**/.venv/**": true,
     "**/data/**": true,
-    "**/weights/**": true,
+    "**/pesos/**": true,
     "**/weights_*/**": true,
-    "**/external/**": true,
-    "**/results/**": true,
+    "**/externo/**": true,
+    "**/resultados/**": true,
     "**/logs/**": true
   },
   "search.exclude": {
@@ -33,14 +33,14 @@
     "**/weights": true,
     "**/weights_*": true,
     "**/external": true,
-    "**/results/scores": true,
-    "**/results/probabilidades": true,
+    "**/resultados/scores": true,
+    "**/resultados/probabilidades": true,
     "**/logs": true
   },
   "python.analysis.exclude": [
     "**/.venv/**",
     "**/data/**",
-    "**/external/**"
+    "**/externo/**"
   ],
 
   "terminal.integrated.defaultProfile.windows": "PowerShell",

@@ -6,7 +6,7 @@
 # CUDA sempre que torch.cuda.is_available() for verdadeiro -- nao quando o
 # modelo esta na GPU. O contorno e CUDA_VISIBLE_DEVICES vazio, que vale para o
 # processo inteiro e conflita com o objeto-sombra, que roda em GPU. Daí dois.
-# (Armadilha 11 do docs/ESTADO_ATUAL.md.)
+# (Armadilha 11 do documentacao/ESTADO_ATUAL.md.)
 #
 # POR QUE Start-Process, E NAO wsl ... &
 # --------------------------------------
@@ -40,7 +40,7 @@ if ($vivos.Count -eq 1) {
 Write-Host '=== 8404: objeto-sombra em GPU ===' -ForegroundColor Cyan
 Start-Process wsl.exe -ArgumentList @(
     '-d', 'Ubuntu-24.04', '-u', 'root', '--',
-    $py, '-u', "$raiz/scripts/wsl/servico_t04.py",
+    $py, '-u', "$raiz/automacao/wsl/servico_t04.py",
     '--porta', '8404', '--dispositivo', 'cuda',
     '--representacoes', 'object_shadow'
 ) -WindowStyle Hidden
@@ -48,7 +48,7 @@ Start-Process wsl.exe -ArgumentList @(
 Write-Host '=== 8405: campos e retas em CPU, com a placa escondida ===' -ForegroundColor Cyan
 Start-Process wsl.exe -ArgumentList @(
     '-d', 'Ubuntu-24.04', '-u', 'root', '--', 'env', 'CUDA_VISIBLE_DEVICES=',
-    $py, '-u', "$raiz/scripts/wsl/servico_t04.py",
+    $py, '-u', "$raiz/automacao/wsl/servico_t04.py",
     '--porta', '8405', '--dispositivo', 'cpu',
     '--representacoes', 'perspective_fields,line_segment'
 ) -WindowStyle Hidden

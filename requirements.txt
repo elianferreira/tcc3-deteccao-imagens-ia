@@ -59,6 +59,6 @@ pandas==2.2.3
 tqdm==4.67.0
 
 # T02 (SPAI) e T04 (geometria projetiva) sao executadas por subprocesso sobre
-# ambientes virtuais proprios, criados por scripts/setup_external.py. Suas
+# ambientes virtuais proprios, criados por automacao/setup_external.py. Suas
 # dependencias NAO constam deste arquivo por serem incompativeis entre si e com
 # as versoes acima -- o SPAI exige Python 3.11 e CUDA 12.4 especificamente.
