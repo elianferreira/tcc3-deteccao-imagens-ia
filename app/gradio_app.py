@@ -18,9 +18,12 @@ implantacao em ambiente de producao.
 
 from __future__ import annotations
 
+import contextlib
+import os
 import sys
 import tempfile
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import gradio as gr
@@ -29,7 +32,10 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.config import EXTERNAL, TECHNIQUE_NAMES, WEIGHTS_DIR   # noqa: E402
+from scripts.normalize_corpus import resize_and_center_crop      # noqa: E402
+from src.config import (                                         # noqa: E402
+    EXTERNAL, IMAGE_SIZE, TECHNIQUE_NAMES, WEIGHTS_DIR,
+)
 from src.plots import magnitude_spectrum_array                  # noqa: E402
 from src.techniques.base import TechniqueError                  # noqa: E402
 from src.techniques.t02_spai import T02SPAI                     # noqa: E402
@@ -43,6 +49,37 @@ ALLOWED_FORMATS = {"PNG", "JPEG", "WEBP"}
 MAX_FILE_BYTES = 10 * 1024 * 1024
 
 DISPLAY_ORDER = ("T01", "T02", "T03", "T04", "T05")   # RN05
+
+# ---------------------------------------------------------------------------
+# Politica de resolucao por tecnica -- opcao (b) de 31/08/2026
+# ---------------------------------------------------------------------------
+#
+# Cada tecnica recebe a imagem na condicao em que foi medida. T01, T03 e T04
+# foram treinadas e avaliadas em 256x256; a T02 e espectral e foi verificada em
+# resolucao nativa (secao 4.9: o controle do glide da 0,9626 contra 0,902
+# publicado).
+#
+# Medido em adobe_firefly_00002 (2688x1536, sintetica):
+#
+#     tecnica    nativa    256 px
+#     T01          2,5%     97,7%
+#     T02         99,8%      0,0%
+#     T04         69,8%     69,7%   (mesma resposta, e 12x mais cara em nativa)
+#
+# Nenhuma resolucao unica funciona: com tudo normalizado a T05 da 2,5%, com tudo
+# nativo da 19,5% -- as duas erram. Com a T02 em nativa e o resto normalizado, a
+# T05 da 99,3%.
+#
+# A T05 continua sendo alimentada pelo escore de 256 px, e nao pelo nativo. A
+# fusao foi ajustada nessa distribuicao, e troca-la aqui mediria o reajuste em
+# vez da mudanca (armadilha 6 de ESTADO_ATUAL.md). Por isso a T02 e avaliada
+# duas vezes: o nativo vai para a tela, o de 256 px vai para a fusao.
+#
+# TETO: a T02 em 4,13 MPx consumiu 5.931 MiB dos 6.144 da placa e derrubou os
+# servicos T04 do WSL2 por esgotamento de memoria. A RN02 aceita 10 MB, que
+# podem ser bem maiores. Sem teto isto nao e operavel neste hardware.
+TCC3_T02_NATIVA = os.environ.get("TCC3_T02_NATIVA", "1") != "0"
+TETO_T02 = int(os.environ.get("TCC3_T02_TETO", "1536"))
 
 
 class DetectionService:
@@ -175,8 +212,24 @@ class DetectionService:
 
     # ------------------------------------------------------------------
 
-    def analyze(self, image_path: Path) -> dict[str, dict]:
-        """Executa cada modulo isoladamente sobre uma unica imagem."""
+    def analyze(
+        self, image_path: Path, caminho_t02: Path | None = None
+    ) -> dict[str, dict]:
+        """Executa cada modulo isoladamente sobre uma unica imagem.
+
+        ``image_path`` esta na condicao medida do Capitulo 4 -- 256x256 -- e e o
+        que alimenta **todas** as fontes da fusao.
+
+        ``caminho_t02``, quando presente, e a mesma imagem em resolucao nativa
+        (com teto). A T02 e entao avaliada **duas vezes**: o escore nativo vai
+        para a tela, porque e a condicao em que a tecnica foi verificada, e o de
+        256 px segue alimentando a T05, porque foi nessa distribuicao que a
+        fusao foi ajustada. Trocar a entrada da fusao aqui mediria o reajuste em
+        vez da mudanca -- armadilha 6 de ESTADO_ATUAL.md.
+
+        Omitir o argumento reproduz o comportamento anterior a 31/08/2026, que e
+        o que ``scripts/medir_rnf01_com_t04.py`` mede.
+        """
         outcomes: dict[str, dict] = {}
         source_scores: dict[str, np.ndarray] = {}
 
@@ -190,13 +243,47 @@ class DetectionService:
                 continue
             try:
                 started = time.perf_counter()
-                probability = float(technique.predict_proba([image_path])[0])
+                nativo: float | None = None
+                if technique_id == "T02" and caminho_t02 is not None:
+                    # UMA chamada, dois escores. ``predict_proba`` ja opera
+                    # em lote: escreve todos os caminhos num CSV e lanca UM
+                    # subprocesso. Duas chamadas pagariam o arranque do
+                    # interpretador e a carga do modelo duas vezes -- 51,16 s
+                    # contra 21,49 s medidos em 31/08/2026, com os escores
+                    # **identicos bit a bit** nas duas formas.
+                    try:
+                        par = technique.predict_proba([image_path, caminho_t02])
+                        probability = float(par[0])     # 256 px -> fusao
+                        nativo = float(par[1])          # nativa -> tela
+                    except Exception as falha:          # noqa: BLE001
+                        # O modo de falha esperado e falta de memoria na
+                        # imagem grande. Juntar as duas passadas nao pode
+                        # custar o escore de 256 px, que e o que a fusao
+                        # precisa -- entao refaz so com ele (RN07).
+                        probability = float(
+                            technique.predict_proba([image_path])[0]
+                        )
+                        outcomes.setdefault(technique_id, {})["aviso"] = (
+                            "resolucao nativa indisponivel "
+                            f"({sanitize_for_table(falha, 90)}); "
+                            "exibindo o escore de 256 px"
+                        )
+                else:
+                    probability = float(technique.predict_proba([image_path])[0])
                 source_scores[technique_id] = np.array([probability])
+                aviso = outcomes.get(technique_id, {}).get("aviso")
                 outcomes[technique_id] = {
                     "status": "ok",
                     "score": probability,
                     "elapsed": time.perf_counter() - started,
                 }
+                if aviso:
+                    outcomes[technique_id]["aviso"] = aviso
+                if nativo is not None:
+                    # A fusao continua vendo os 256 px; a tela ve a nativa.
+                    outcomes[technique_id]["score_fusao"] = probability
+                    outcomes[technique_id]["score"] = nativo
+                    outcomes[technique_id]["resolucao_nativa"] = True
             except (TechniqueError, Exception) as error:    # noqa: BLE001
                 # RN07: registra a falha e prossegue com os demais modulos.
                 outcomes[technique_id] = {"status": "erro", "detail": str(error)}
@@ -274,6 +361,134 @@ def validate_upload(path: str | None) -> tuple[bool, str]:
 
 
 # ---------------------------------------------------------------------------
+# Normalizacao do envio
+# ---------------------------------------------------------------------------
+
+
+@contextlib.contextmanager
+def envio_normalizado(origem: Path) -> Iterator[Path]:
+    """Poe o upload na mesma condicao em que as tecnicas foram medidas.
+
+    Por que isto existe
+    -------------------
+    Todos os numeros do Capitulo 4 foram medidos sobre o corpus normalizado por
+    ``scripts/normalize_corpus.py``: menor lado a 256 px com LANCZOS, recorte
+    central, RGB. Ate 31/08/2026 a interface entregava o arquivo **cru** as
+    cinco tecnicas, e um envio de 1024 px colocava T01, T03 e T04 fora da
+    condicao em que foram treinadas e avaliadas.
+
+    O efeito era visivel na tela. Com ``dalle3_00000`` (sintetica), o mesmo
+    arquivo nas duas resolucoes:
+
+        =======  ==============  ==================
+        Tecnica     1024 px cru  256 px normaliz.
+        =======  ==============  ==================
+        T01         0,0% errado      99,5% correto
+        T02       99,9% correto        0,0% errado
+        =======  ==============  ==================
+
+    T01 e T02 trocavam de lado exatamente. Nao e defeito de nenhuma das duas: a
+    T01 foi treinada em 256 px e a T02 e espectral, medida em resolucao nativa
+    por construcao. Normalizar acerta a T01 e piora a T02 na tela -- e a perda
+    de 17,8 p.p. da secao 4.9, que e resultado medido, nao dano deste conserto.
+
+    Efeito colateral util: uma imagem grande nunca mais chega crua aos modelos,
+    o que elimina o caso de 214 s observado em 1024 px no processo frio.
+
+    Custo
+    -----
+    Uma imagem ja conforme -- 256 x 256 em RGB, que e o caso do corpus inteiro
+    -- e devolvida sem copia, para que ``scripts/medir_rnf01_com_t04.py`` siga
+    medindo o mesmo caminho de antes. Sobra apenas a abertura do arquivo para
+    conferir dimensoes e modo.
+
+    RNF03: o arquivo normalizado vive num diretorio temporario removido na
+    saida do contexto, mesmo em caso de excecao.
+    """
+    with Image.open(origem) as imagem:
+        ja_conforme = imagem.size == (IMAGE_SIZE, IMAGE_SIZE) and imagem.mode == "RGB"
+        # A conversao acontece dentro do ``with`` porque ``resize_and_center_crop``
+        # le os pixels; o descritor precisa continuar aberto ate aqui.
+        normalizada = None if ja_conforme else resize_and_center_crop(imagem, IMAGE_SIZE)
+        if normalizada is not None:
+            # ``crop`` e preguicoso no PIL. Forcar a leitura aqui garante que
+            # nada dependa do descritor depois que o ``with`` o fechar.
+            normalizada.load()
+
+    if normalizada is None:
+        # Fora do ``with``: o arquivo ja esta fechado quando as tecnicas o leem.
+        # T02 abre a imagem num subprocesso e o Windows nao gosta de dois
+        # descritores concorrentes sobre o mesmo arquivo.
+        yield origem
+        return
+
+    with tempfile.TemporaryDirectory(prefix="tcc3_envio_") as pasta:
+        # PNG: mesmo formato de saida da normalizacao do corpus, e sem
+        # recompressao com perdas sobre o que sera analisado.
+        destino = Path(pasta) / "envio_normalizado.png"
+        normalizada.save(destino, format="PNG")
+        normalizada.close()
+        yield destino
+
+
+@contextlib.contextmanager
+def envio_para_t02(origem: Path) -> Iterator[Path | None]:
+    """Entrega a T02 a maior resolucao que esta maquina aguenta.
+
+    A T02 e literalmente *"Any-Resolution AI-Generated Image Detection by
+    **Spectral** Learning"*: seu sinal e a distribuicao espectral, e reamostrar
+    para 256x256 destroi a evidencia de alta frequencia que ela explora. A
+    secao 4.9 mede isso -- media 17,8 p.p. abaixo do publicado --, e o controle
+    do ``glide`` (nativo 256 px, intocado pela normalizacao) fecha a questao ao
+    medir 0,9626 contra 0,902 publicado.
+
+    Por que ha um teto
+    ------------------
+    Em 31/08/2026, a T02 sobre ``adobe_firefly_00002`` (2688x1536, 4,13 MPx)
+    consumiu **5.931 MiB dos 6.144** da placa, com a interface parada. Com a
+    interface no ar, a mesma chamada esgotou a memoria e **derrubou os dois
+    servicos T04 do WSL2**. A RN02 aceita arquivos de 10 MB, que podem ser bem
+    maiores que isso -- sem teto, um envio grande derruba a aplicacao.
+
+    O teto vem da 4.9: nao ha dose-resposta, o efeito e de limiar -- reducao de
+    2x fica dentro da tolerancia de 5 p.p., e so a partir de ~3,5x a degradacao
+    satura. O padrao de 1.536 px no maior lado mantem a maioria dos envios
+    dentro dessa faixa. **Nao e teto medido**; a medicao de ~200 imagens que o
+    fixaria esta registrada como pergunta em aberto no ESTADO_ATUAL.md.
+
+    Devolve ``None`` quando a politica esta desligada
+    (``TCC3_T02_NATIVA=0``), caso em que a T02 volta a receber os 256 px como
+    todas as demais.
+    """
+    if not TCC3_T02_NATIVA:
+        yield None
+        return
+
+    with Image.open(origem) as imagem:
+        largura, altura = imagem.size
+        maior = max(largura, altura)
+        if maior <= TETO_T02:
+            # Ja cabe: entrega o proprio arquivo, sem reamostrar. Este e o caso
+            # que preserva integralmente o sinal espectral da T02.
+            reduzida = None
+        else:
+            escala = TETO_T02 / maior
+            destino_tam = (max(1, round(largura * escala)), max(1, round(altura * escala)))
+            reduzida = imagem.convert("RGB").resize(destino_tam, Image.LANCZOS)
+            reduzida.load()
+
+    if reduzida is None:
+        yield origem
+        return
+
+    with tempfile.TemporaryDirectory(prefix="tcc3_t02_") as pasta:
+        destino = Path(pasta) / "envio_t02.png"
+        reduzida.save(destino, format="PNG")
+        reduzida.close()
+        yield destino
+
+
+# ---------------------------------------------------------------------------
 # Renderizacao
 # ---------------------------------------------------------------------------
 
@@ -308,9 +523,15 @@ def format_results(outcomes: dict[str, dict]) -> str:
         outcome = outcomes.get(technique_id, {"status": "indisponivel", "detail": "-"})
         name = TECHNIQUE_NAMES.get(technique_id, technique_id)
         if outcome["status"] == "ok":
+            situacao = f"concluída em {outcome['elapsed']:.2f} s"
+            if outcome.get("resolucao_nativa"):
+                # Deixa visivel que esta linha nao foi medida em 256 x 256.
+                situacao += " · resolução nativa"
+            if outcome.get("aviso"):
+                situacao += f" · {sanitize_for_table(outcome['aviso'], 90)}"
             lines.append(
                 f"| **{technique_id}** | {name} | **{outcome['score'] * 100:.1f}%** | "
-                f"concluída em {outcome['elapsed']:.2f} s |"
+                f"{situacao} |"
             )
         else:
             detail = sanitize_for_table(outcome.get("detail", ""))
@@ -328,7 +549,29 @@ def format_results(outcomes: dict[str, dict]) -> str:
         "técnica isoladamente. O sistema não emite classificação binária "
         "automática: a interpretação do conjunto de resultados cabe ao usuário "
         "(RN04).",
+        "",
+        f"> Antes da análise a imagem é normalizada para {IMAGE_SIZE} × {IMAGE_SIZE} "
+        "— menor lado redimensionado com LANCZOS e recorte central —, que é a "
+        "condição em que T01, T03 e T04 foram treinadas e avaliadas. O espectro "
+        "exibido é o da imagem normalizada.",
     ]
+
+    t02 = outcomes.get("T02", {})
+    if t02.get("resolucao_nativa"):
+        # Sem esta nota a tela mostraria dois números de T02 sem dizer que sao
+        # dois, e o leitor tentaria fechar a conta da fusao com o errado.
+        lines += [
+            "",
+            "> A **T02 é avaliada em resolução nativa**, e não em "
+            f"{IMAGE_SIZE} × {IMAGE_SIZE}: seu sinal é espectral e o "
+            "redimensionamento destrói a evidência de alta frequência que ela "
+            "explora (seção 4.9). O escore exibido acima é o da resolução "
+            "nativa. **A T05 continua sendo alimentada pelo escore de "
+            f"{IMAGE_SIZE} × {IMAGE_SIZE}** "
+            f"(**{t02.get('score_fusao', float('nan')) * 100:.1f}%**), que é a "
+            "distribuição em que a fusão foi ajustada — por isso os dois "
+            "números não fecham por soma direta.",
+        ]
     return "\n".join(lines)
 
 
@@ -340,8 +583,19 @@ def build_interface(service: DetectionService | None = None) -> gr.Blocks:
         if not valid:
             return f"### Envio inválido\n\n{message}", None
 
-        outcomes = service.analyze(Path(image_path))
-        spectrum = magnitude_spectrum_array(Path(image_path))     # RF05
+        # A normalizacao envolve **as duas** saidas de proposito: os modulos e
+        # o espectro exibido precisam ver a mesma imagem. O espectro sobre o
+        # arquivo cru ainda espremia uma 1024x768 num quadrado de 256, o que
+        # distorce a geometria justamente do que se pede ao usuario para ler.
+        with envio_normalizado(Path(image_path)) as caminho, \
+                envio_para_t02(Path(image_path)) as caminho_t02:
+            # Envio ja conforme (256 x 256 em RGB): os dois gerenciadores
+            # devolvem o mesmo arquivo, e a segunda passada da T02 seria
+            # uma repeticao de ~40 s sem nenhuma informacao nova.
+            if caminho_t02 == caminho:
+                caminho_t02 = None
+            outcomes = service.analyze(caminho, caminho_t02=caminho_t02)
+            spectrum = magnitude_spectrum_array(caminho)          # RF05
         return format_results(outcomes), spectrum
 
     with gr.Blocks(title="Detecção de Imagens Geradas por IA") as demo:

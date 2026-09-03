@@ -21,10 +21,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 pytest.importorskip("gradio", reason="os testes de interface exigem Gradio")
 
+import app.gradio_app as gradio_app                # noqa: E402
 from app.gradio_app import (      # noqa: E402
-    DISPLAY_ORDER, MAX_FILE_BYTES, format_results, validate_upload,
+    DISPLAY_ORDER, MAX_FILE_BYTES, envio_normalizado, envio_para_t02,
+    format_results, validate_upload,
 )
+from scripts.normalize_corpus import resize_and_center_crop     # noqa: E402
+from src.config import IMAGE_SIZE                  # noqa: E402
 from src.plots import magnitude_spectrum_array     # noqa: E402
+from src.techniques.base import TechniqueError     # noqa: E402
 
 
 @pytest.fixture
@@ -192,6 +197,214 @@ def test_modulo_ausente_do_dicionario_e_tratado():
     rendered = format_results({"T01": {"status": "ok", "score": 0.5, "elapsed": 0.1}})
     for technique_id in DISPLAY_ORDER:
         assert f"**{technique_id}**" in rendered
+
+
+# ---------------------------------------------------------------------------
+# Normalizacao do envio
+# ---------------------------------------------------------------------------
+#
+# Ate 31/08/2026 a interface mandava o upload cru para as cinco tecnicas,
+# enquanto todos os numeros do Capitulo 4 foram medidos sobre o corpus
+# normalizado. Um envio de 1024 px invertia T01 e T02 na tela sobre a mesma
+# imagem sintetica. Estes testes fixam a condicao de entrada.
+
+
+@pytest.mark.parametrize("size", [(1024, 1024), (1024, 768), (300, 900), (64, 64)])
+def test_envio_normalizado_entrega_256_em_rgb(image_factory, size):
+    origem = image_factory("envio.png", "PNG", size=size)
+    with envio_normalizado(origem) as caminho:
+        with Image.open(caminho) as normalizada:
+            assert normalizada.size == (IMAGE_SIZE, IMAGE_SIZE)
+            assert normalizada.mode == "RGB"
+            assert (normalizada.format or "").upper() == "PNG"
+
+
+def test_envio_normalizado_reproduz_a_normalizacao_do_corpus(image_factory):
+    """O pixel entregue as tecnicas e o mesmo que ``normalize_corpus`` gravaria."""
+    origem = image_factory("envio.png", "PNG", size=(1024, 768))
+    with Image.open(origem) as imagem:
+        esperado = np.asarray(resize_and_center_crop(imagem, IMAGE_SIZE))
+
+    with envio_normalizado(origem) as caminho:
+        obtido = np.asarray(Image.open(caminho).convert("RGB"))
+
+    assert np.array_equal(obtido, esperado)
+
+
+def test_envio_ja_conforme_nao_copia(image_factory):
+    """256 x 256 em RGB e o corpus inteiro: devolver o proprio arquivo mantem
+    ``medir_rnf01_com_t04.py`` medindo o mesmo caminho de antes."""
+    origem = image_factory("conforme.png", "PNG", size=(IMAGE_SIZE, IMAGE_SIZE))
+    with envio_normalizado(origem) as caminho:
+        assert caminho == origem
+
+
+def test_envio_256_nao_rgb_e_convertido(tmp_path):
+    """256 x 256 em escala de cinza nao esta conforme: falta o modo RGB."""
+    origem = tmp_path / "cinza.png"
+    Image.fromarray(np.full((IMAGE_SIZE, IMAGE_SIZE), 128, dtype=np.uint8)).save(origem)
+
+    with envio_normalizado(origem) as caminho:
+        assert caminho != origem
+        with Image.open(caminho) as normalizada:
+            assert normalizada.mode == "RGB"
+
+
+def test_envio_normalizado_remove_o_temporario(image_factory):
+    """RNF03: nenhum arquivo intermediario sobrevive a analise."""
+    origem = image_factory("envio.png", "PNG", size=(800, 600))
+    with envio_normalizado(origem) as caminho:
+        assert caminho.exists()
+        vazado = caminho
+    assert not vazado.exists()
+    assert not vazado.parent.exists()
+
+
+def test_envio_normalizado_remove_o_temporario_em_excecao(image_factory):
+    """A limpeza nao pode depender do sucesso da analise (RN07)."""
+    origem = image_factory("envio.png", "PNG", size=(800, 600))
+    vazado = None
+    with pytest.raises(TechniqueError):
+        with envio_normalizado(origem) as caminho:
+            vazado = caminho
+            raise TechniqueError("falha simulada de modulo")
+    assert vazado is not None and not vazado.exists()
+
+
+def test_envio_normalizado_fecha_o_descritor_da_origem(image_factory):
+    """T02 abre a imagem num subprocesso; um descritor aberto do lado do Gradio
+    impediria a leitura no Windows."""
+    origem = image_factory("envio.png", "PNG", size=(1024, 1024))
+    with envio_normalizado(origem):
+        origem.unlink()          # so e possivel com o arquivo fechado
+    assert not origem.exists()
+
+
+def test_nota_de_normalizacao_aparece_no_sumario(outcomes_completos):
+    """O leitor da tela precisa saber que nao ve o escore do arquivo cru."""
+    rendered = format_results(outcomes_completos)
+    assert f"{IMAGE_SIZE} × {IMAGE_SIZE}" in rendered
+    assert "LANCZOS" in rendered
+
+
+# ---------------------------------------------------------------------------
+# Resolucao entregue a T02 - opcao (b) de 31/08/2026
+# ---------------------------------------------------------------------------
+#
+# A T02 e espectral: normalizar para 256 px destroi a evidencia que ela explora.
+# Em adobe_firefly_00002 (2688x1536, sintetica) ela mede 99,8% em resolucao
+# nativa e 0,0% em 256 px. Mas a chamada nativa consumiu 5.931 MiB dos 6.144 da
+# placa e derrubou os servicos T04 do WSL2 -- dai o teto.
+
+
+def test_t02_recebe_o_original_quando_cabe_no_teto(image_factory):
+    origem = image_factory("cabe.png", "PNG", size=(1024, 768))
+    with envio_para_t02(origem) as caminho:
+        assert caminho == origem          # sem reamostrar: sinal espectral intacto
+
+
+def test_t02_reduz_ate_o_teto_preservando_proporcao(image_factory, monkeypatch):
+    monkeypatch.setattr(gradio_app, "TETO_T02", 1536)
+    origem = image_factory("grande.png", "PNG", size=(2688, 1536))
+    with envio_para_t02(origem) as caminho:
+        assert caminho != origem
+        with Image.open(caminho) as reduzida:
+            assert max(reduzida.size) == 1536
+            # 2688x1536 -> 1536x878; a proporcao original e preservada.
+            assert reduzida.size == (1536, 878)
+            assert reduzida.mode == "RGB"
+
+
+def test_t02_respeita_teto_menor(image_factory, monkeypatch):
+    monkeypatch.setattr(gradio_app, "TETO_T02", 512)
+    origem = image_factory("grande.png", "PNG", size=(2048, 1024))
+    with envio_para_t02(origem) as caminho:
+        with Image.open(caminho) as reduzida:
+            assert reduzida.size == (512, 256)
+
+
+def test_t02_desligada_por_variavel_de_ambiente(image_factory, monkeypatch):
+    """TCC3_T02_NATIVA=0 devolve a interface ao comportamento de 31/08 pela manha."""
+    monkeypatch.setattr(gradio_app, "TCC3_T02_NATIVA", False)
+    origem = image_factory("grande.png", "PNG", size=(2688, 1536))
+    with envio_para_t02(origem) as caminho:
+        assert caminho is None
+
+
+def test_t02_remove_o_temporario(image_factory, monkeypatch):
+    """RNF03, tambem no caminho da T02."""
+    monkeypatch.setattr(gradio_app, "TETO_T02", 512)
+    origem = image_factory("grande.png", "PNG", size=(2048, 1024))
+    with envio_para_t02(origem) as caminho:
+        vazado = caminho
+        assert vazado.exists()
+    assert not vazado.exists()
+    assert not vazado.parent.exists()
+
+
+def test_t02_remove_o_temporario_em_excecao(image_factory, monkeypatch):
+    monkeypatch.setattr(gradio_app, "TETO_T02", 512)
+    origem = image_factory("grande.png", "PNG", size=(2048, 1024))
+    vazado = None
+    with pytest.raises(TechniqueError):
+        with envio_para_t02(origem) as caminho:
+            vazado = caminho
+            raise TechniqueError("falha simulada")
+    assert vazado is not None and not vazado.exists()
+
+
+def test_envio_ja_conforme_dispensa_a_segunda_passada(image_factory):
+    """256 x 256 em RGB: os dois gerenciadores devolvem o mesmo arquivo, e
+    ``run_analysis`` anula a segunda passada da T02 nesse caso."""
+    origem = image_factory("conforme.png", "PNG", size=(IMAGE_SIZE, IMAGE_SIZE))
+    with envio_normalizado(origem) as norm, envio_para_t02(origem) as para_t02:
+        assert norm == para_t02 == origem
+
+
+# --- o que a tela precisa dizer quando ha dois escores de T02 ---------------
+
+
+@pytest.fixture
+def outcomes_com_t02_nativa(outcomes_completos):
+    outcomes_completos["T02"] = {
+        "status": "ok",
+        "score": 0.9977,            # resolucao nativa: vai para a tela
+        "score_fusao": 0.0001,      # 256 px: alimenta a T05
+        "elapsed": 43.2,
+        "resolucao_nativa": True,
+    }
+    return outcomes_completos
+
+
+def test_tela_marca_a_linha_da_t02_como_nativa(outcomes_com_t02_nativa):
+    rendered = format_results(outcomes_com_t02_nativa)
+    assert "99.8%" in rendered
+    assert "resolução nativa" in rendered
+
+
+def test_tela_declara_que_a_fusao_usa_o_escore_de_256(outcomes_com_t02_nativa):
+    """Sem isto o leitor tentaria fechar a conta da T05 com o numero errado."""
+    rendered = format_results(outcomes_com_t02_nativa)
+    assert "0.0%" in rendered                    # o escore que alimenta a fusao
+    assert "T05 continua sendo alimentada" in rendered
+
+
+def test_sem_t02_nativa_a_tela_nao_menciona_resolucao(outcomes_completos):
+    rendered = format_results(outcomes_completos)
+    assert "resolução nativa" not in rendered
+    assert "T05 continua sendo alimentada" not in rendered
+
+
+def test_aviso_de_falha_da_passada_nativa_aparece(outcomes_completos):
+    """RN07: se a resolucao nativa falhar por memoria, a analise segue inteira."""
+    outcomes_completos["T02"] = {
+        "status": "ok", "score": 0.0001, "elapsed": 40.0,
+        "aviso": "resolucao nativa indisponivel (CUDA out of memory); "
+                 "exibindo o escore de 256 px",
+    }
+    rendered = format_results(outcomes_completos)
+    assert "CUDA out of memory" in rendered
+    assert "resultado não disponível" not in rendered.split("T03")[0]
 
 
 # ---------------------------------------------------------------------------
