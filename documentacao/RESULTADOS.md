@@ -25,6 +25,19 @@ Tempo de execução: 712,7 min (~11 h 53).
 | T03 — Benford/DCT | 0,8064 | 0,7326 | 0,7242 | 0,2371 | 40,7 |
 | **T05 — Fusão (proposta)** | **0,9996** | **0,9889** | **0,9888** | **0,0042** | — |
 
+> ⚠️ **Procedência do modelo de T05 desta tabela (acrescentado em 25/09/2026).**
+> A linha acima é do modelo de **quatro fontes**, na versão de 16/08, hoje em
+> `pesos/t05_fusion__quatro_fontes__16-08_publicado.pkl`. **Não** é a de
+> `pesos/t05_fusion.pkl`, que é o modelo de três fontes carregado por padrão
+> pelo código e usado pela interface — esse dá **FPR 0,0400** neste mesmo
+> conjunto, 9,5× mais.
+>
+> Os dois números estão corretos e são de modelos diferentes. A auditoria de
+> 25/09 aplicou os cinco modelos a esta partição exata (n = 9.000, 4.500 reais)
+> a partir dos escores em cache; a tabela completa está em `pesos/LEIA-ME.md`.
+> Até 25/09 o repositório não continha o modelo desta linha — ele foi
+> recuperado do histórico (`git show 83ae954:...`).
+
 T05 supera a melhor técnica isolada (T02, 0,9976) e reduz a taxa de falsos
 positivos em uma ordem de grandeza — de 5,04% para 0,42%. Como a interface é
 declaradamente auxiliar e não substitui perícia, o custo de acusar uma imagem
@@ -664,26 +677,49 @@ classificador de fusão lhe atribua peso.
 **T05 permanece em 0,9996** — idêntica ao valor com três fontes. E o peso que a
 regressão logística atribui a cada domínio explica por quê:
 
-| Fonte | Peso |
-|---|---|
-| T02 (espectral) | +4,2525 |
-| T01 (espacial) | +3,4061 |
-| T03 (estatístico) | +0,5063 |
-| **T04 (geométrico)** | **−0,0403** |
+| Fonte | Peso (16/08) | Peso (18/08, reajuste) |
+|---|---|---|
+| T02 (espectral) | +4,2525 | +4,2661 |
+| T01 (espacial) | +3,4061 | +3,4303 |
+| T03 (estatístico) | +0,5063 | +0,5205 |
+| **T04 (geométrico)** | **−0,0403** | **−0,2512** |
 
-A fusão aprendeu a **ignorar** T04: peso praticamente nulo, duas ordens de
-grandeza abaixo de T01 e T02. É o comportamento desejável e não estava
-garantido — o classificador poderia ter se apoiado em ruído e perdido
-desempenho.
+> ⚠️ **Correção de 25/09/2026.** Esta tabela trazia só a coluna de 16/08, medida
+> quando T04 entrava com **uma** representação (objeto-sombra). O reajuste de
+> 18/08 — commit `e006e8c`, quando as três representações passaram a entrar —
+> **sobrescreveu o arquivo sem que a tabela fosse atualizada**. A segunda coluna
+> é o que `pesos/t05_fusion__quatro_fontes.pkl` contém hoje.
+>
+> A mensagem daquele commit afirma que *"as três representações não mudam a
+> fusão"*. T01, T02 e T03 de fato mal se movem; **o peso de T04 muda 6×**.
+
+Na condição de 16/08, a fusão aprendeu a **ignorar** T04: peso praticamente
+nulo, duas ordens de grandeza abaixo de T01 e T02. É o comportamento desejável
+e não estava garantido — o classificador poderia ter se apoiado em ruído e
+perdido desempenho.
+
+> ⚠️ **O argumento enfraquece na condição de 18/08.** Com **−0,2512**, T04 está
+> **uma** ordem de grandeza abaixo de T01 e T02, não duas, e o peso não é
+> desprezível. A tolerância a uma fonte fraca continua sustentada pela AUC, que
+> não se move; o que não se sustenta mais é a formulação *"peso praticamente
+> nulo"*.
+>
+> ⚠️ E há uma premissa desta seção que caiu por outro caminho: ela trata T04
+> como *"uma fonte que de fato não carrega sinal"*. Em 31/08 T04 saiu do acaso
+> nos geradores modernos (0,5333 → **0,6225**), e em 24/09 foi a **única** das
+> cinco técnicas a não degradar sob troca de fonte real (FPR 0,0511 → 0,0410).
+> Ver a auditoria no cofre.
 
 Isso reforça, por evidência direta, a premissa de RN07 e RNF04: a arquitetura
 tolera uma fonte inútil sem degradar a decisão. Até aqui essa tolerância havia
 sido verificada apenas por desativação simulada de módulos nos testes de falha
 controlada; agora foi medida com uma fonte real que de fato não carrega sinal.
 
-O modelo de quatro fontes está em `pesos/t05_fusion__quatro_fontes.pkl`.
+O modelo de quatro fontes está em `pesos/t05_fusion__quatro_fontes.pkl` (versão
+de 18/08) e o que produziu os números publicados, em
+`pesos/t05_fusion__quatro_fontes__16-08_publicado.pkl`.
 `pesos/t05_fusion.pkl` segue sendo o de três fontes, que é o que a interface
-carrega.
+carrega — e **não** é o modelo da tabela da Seção 4.1. Ver `pesos/LEIA-ME.md`.
 
 ---
 

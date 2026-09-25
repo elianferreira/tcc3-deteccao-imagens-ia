@@ -35,6 +35,41 @@ from ..tecnicas.base import BaseTechnique, TechniqueError
 from ..tecnicas.t05_fusao import SOURCE_TECHNIQUES, T05Fusion, build_score_matrix
 
 
+
+def _procedencia_dos_pesos() -> dict:
+    """Quais arquivos de peso esta rodada usou, e o hash de cada um.
+
+    Existe por causa da auditoria de 25/09/2026. Ate ela, o JSON de execucao
+    guardava `timestamp`, `n_results` e `failures` -- **nada sobre o modelo**.
+    Descobrir de qual fusao saiu a FPR publicada de 0,42% exigiu cruzar datas de
+    CSV com o historico do git, e so foi possivel porque os pesos estao
+    versionados.
+
+    O caso concreto: ha seis `t05_fusion*.pkl` em `pesos/`, e entre eles a FPR
+    varia por um fator de 9,5x no mesmo conjunto de teste. Sem registro, "de
+    qual modelo saiu este numero?" nao tem resposta local.
+
+    O hash vai junto do caminho de proposito: o arquivo que produziu os numeros
+    publicados **foi sobrescrito** por um reajuste em 18/08, entao nome de
+    arquivo sozinho nao identifica modelo.
+    """
+    import hashlib
+
+    procedencia: dict[str, object] = {"diretorio": str(WEIGHTS_DIR)}
+    arquivos: dict[str, str] = {}
+    try:
+        for caminho in sorted(WEIGHTS_DIR.glob("*.pkl")) + sorted(WEIGHTS_DIR.glob("*.pt")):
+            try:
+                digest = hashlib.sha256(caminho.read_bytes()).hexdigest()[:16]
+            except OSError as erro:                          # noqa: PERF203
+                digest = f"ilegivel: {erro}"
+            arquivos[caminho.name] = digest
+    except OSError as erro:                                  # noqa: BLE001
+        procedencia["erro"] = str(erro)
+    procedencia["sha256"] = arquivos
+    return procedencia
+
+
 @dataclass
 class ProtocolResult:
     protocol: str
@@ -442,6 +477,7 @@ class ExperimentRunner:
         manifest = {
             "timestamp": timestamp,
             "n_results": len(self.results),
+            "pesos": _procedencia_dos_pesos(),
             "failures": [
                 {"protocol": r.protocol, "technique": r.technique_id,
                  "condition": r.condition, "error": r.error}
