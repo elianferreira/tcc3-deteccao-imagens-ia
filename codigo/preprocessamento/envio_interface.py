@@ -22,7 +22,7 @@ from .normalizacao import resize_and_center_crop
 
 
 # ---------------------------------------------------------------------------
-# Politica de resolucao por tecnica -- opcao (b) de 31/08/2026
+# Politica de resolucao por tecnica -- de 31/08/2026
 # ---------------------------------------------------------------------------
 #
 # Cada tecnica recebe a imagem na condicao em que foi medida. T01, T03 e T04

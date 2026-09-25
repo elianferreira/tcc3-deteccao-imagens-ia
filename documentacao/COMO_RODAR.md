@@ -1,5 +1,25 @@
 # Como rodar o sistema
 
+> ## ⛔ A tela deste repositório foi desativada em 07/09/2026
+>
+> **A interface oficial do trabalho é a `tcc3-interface-v2`** (porta 7860), que
+> roda T01, T02 e T03 medidas, cada uma com a resolução que o seu método exige.
+>
+> Este repositório **continua ativo** como fonte das medições do Capítulo 4, dos
+> pesos e do corpus. Só a tela saiu de serviço — ela é material de consulta.
+>
+> O motivo é operacional: as duas telas disputam a mesma GPU de 6 GB, e foi com
+> esta no ar que a T02 sobre 4,13 MPx esgotou a memória da placa. Com ela
+> parada, a mesma imagem roda em 21 s sem teto — que é a condição do artigo.
+>
+> Nada foi removido. Para reabrir (**pare a v2 antes**):
+>
+> ```powershell
+> $env:TCC3_V1_TELA = "1"
+> python interface\gradio_app.py
+> ```
+
+
 Atualizado em 02/09/2026. Vale para os dois caminhos: **VS Code** e **terminal**.
 Os tempos são medidos nesta máquina, não estimados.
 
@@ -101,7 +121,7 @@ $env:TCC3_T04_SERVICO = "1"
 $env:TCC3_T02_NATIVA  = "1"
 $env:TCC3_T02_TETO    = "1536"
 Start-Process -FilePath ".\.venv\Scripts\python.exe" `
-  -ArgumentList "-u","app\gradio_app.py" `
+  -ArgumentList "-u","interface\gradio_app.py" `
   -WorkingDirectory (Get-Location).Path -WindowStyle Hidden
 ```
 

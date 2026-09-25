@@ -1,5 +1,25 @@
 # Detecção de Imagens Geradas por Inteligência Artificial
 
+> ## ⛔ A tela deste repositório foi desativada em 07/09/2026
+>
+> **A interface oficial do trabalho é a `tcc3-interface-v2`** (porta 7860), que
+> roda T01, T02 e T03 medidas, cada uma com a resolução que o seu método exige.
+>
+> Este repositório **continua ativo** como fonte das medições do Capítulo 4, dos
+> pesos e do corpus. Só a tela saiu de serviço — ela é material de consulta.
+>
+> O motivo é operacional: as duas telas disputam a mesma GPU de 6 GB, e foi com
+> esta no ar que a T02 sobre 4,13 MPx esgotou a memória da placa. Com ela
+> parada, a mesma imagem roda em 21 s sem teto — que é a condição do artigo.
+>
+> Nada foi removido. Para reabrir (**pare a v2 antes**):
+>
+> ```powershell
+> $env:TCC3_V1_TELA = "1"
+> python interface\gradio_app.py
+> ```
+
+
 Implementação do TCC 3 de **Elian Ferreira** — Ciência da Computação, UNIVALI, 2026.
 Orientador: MSc. Felipe Viel.
 

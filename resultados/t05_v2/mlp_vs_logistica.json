@@ -1,0 +1,66 @@
+[
+  {
+    "modelo": "sem_T03__logistica",
+    "n_param": 7,
+    "auc_ajuste": 0.9948425460636516,
+    "auc_aval": 0.8470053014903566,
+    "auc_aval_min": NaN,
+    "auc_aval_max": NaN
+  },
+  {
+    "modelo": "sem_T03__mlp_8",
+    "n_param": 65,
+    "auc_ajuste": 0.9943577889447235,
+    "auc_aval": 0.8391156704711132,
+    "auc_aval_min": 0.8335834398113429,
+    "auc_aval_max": 0.8419226992421067
+  },
+  {
+    "modelo": "sem_T03__mlp_16",
+    "n_param": 129,
+    "auc_ajuste": 0.9945480737018425,
+    "auc_aval": 0.8426362876576828,
+    "auc_aval_min": 0.83931138148656,
+    "auc_aval_max": 0.845217465605266
+  },
+  {
+    "modelo": "sem_T03__mlp_32_16",
+    "n_param": 769,
+    "auc_ajuste": 0.9953182579564489,
+    "auc_aval": 0.8395443388332791,
+    "auc_aval_min": 0.8371433525964456,
+    "auc_aval_max": 0.8419737511633487
+  },
+  {
+    "modelo": "com_T03__logistica",
+    "n_param": 9,
+    "auc_ajuste": 0.9952110552763818,
+    "auc_aval": 0.8297124218911596,
+    "auc_aval_min": NaN,
+    "auc_aval_max": NaN
+  },
+  {
+    "modelo": "com_T03__mlp_8",
+    "n_param": 81,
+    "auc_ajuste": 0.9951490787269682,
+    "auc_aval": 0.828627316900367,
+    "auc_aval_min": 0.822131391347011,
+    "auc_aval_max": 0.8380592312539382
+  },
+  {
+    "modelo": "com_T03__mlp_16",
+    "n_param": 161,
+    "auc_ajuste": 0.9950706867671691,
+    "auc_aval": 0.8282550812840063,
+    "auc_aval_min": 0.8190582094964722,
+    "auc_aval_max": 0.8362715152090385
+  },
+  {
+    "modelo": "com_T03__mlp_32_16",
+    "n_param": 833,
+    "auc_ajuste": 0.9964274706867673,
+    "auc_aval": 0.8120272334436581,
+    "auc_aval_min": 0.7990178736850835,
+    "auc_aval_max": 0.8225830091056974
+  }
+]

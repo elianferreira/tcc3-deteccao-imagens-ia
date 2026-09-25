@@ -1,0 +1,72 @@
+[
+  {
+    "modelo": "sem_T03__logistica",
+    "auc_ajuste": 0.9948425460636516,
+    "auc_aval": 0.8470053014903566,
+    "auc_aval_min": 0.8470053014903566,
+    "auc_aval_max": 0.8470053014903566
+  },
+  {
+    "modelo": "sem_T03__rf_200",
+    "auc_ajuste": 0.9999996649916248,
+    "auc_aval": 0.8310904223000544,
+    "auc_aval_min": 0.8227895836344318,
+    "auc_aval_max": 0.8351472943799982
+  },
+  {
+    "modelo": "sem_T03__rf_200_prof3",
+    "auc_ajuste": 0.9970095477386934,
+    "auc_aval": 0.8473723120744026,
+    "auc_aval_min": 0.8451709676112711,
+    "auc_aval_max": 0.8492920320893682
+  },
+  {
+    "modelo": "sem_T03__extra_200",
+    "auc_ajuste": 1.0,
+    "auc_aval": 0.8250523342112827,
+    "auc_aval_min": 0.8235099130607353,
+    "auc_aval_max": 0.8272709176858474
+  },
+  {
+    "modelo": "sem_T03__boosting",
+    "auc_ajuste": 0.9996549413735345,
+    "auc_aval": 0.8353130872918346,
+    "auc_aval_min": 0.8352863988813637,
+    "auc_aval_max": 0.8353303203112586
+  },
+  {
+    "modelo": "com_T03__logistica",
+    "auc_ajuste": 0.9952110552763818,
+    "auc_aval": 0.8297124218911596,
+    "auc_aval_min": 0.8297124218911596,
+    "auc_aval_max": 0.8297124218911596
+  },
+  {
+    "modelo": "com_T03__rf_200",
+    "auc_ajuste": 1.0,
+    "auc_aval": 0.835013426894967,
+    "auc_aval_min": 0.8321577310225268,
+    "auc_aval_max": 0.836537770152746
+  },
+  {
+    "modelo": "com_T03__rf_200_prof3",
+    "auc_ajuste": 0.997422445561139,
+    "auc_aval": 0.8387791172715362,
+    "auc_aval_min": 0.8365284226178706,
+    "auc_aval_max": 0.8404320670299742
+  },
+  {
+    "modelo": "com_T03__extra_200",
+    "auc_ajuste": 1.0,
+    "auc_aval": 0.8331743233762913,
+    "auc_aval_min": 0.8312211200120415,
+    "auc_aval_max": 0.8361359459932991
+  },
+  {
+    "modelo": "com_T03__boosting",
+    "auc_ajuste": 0.9999966499162479,
+    "auc_aval": 0.8379928457802951,
+    "auc_aval_min": 0.837971538194387,
+    "auc_aval_max": 0.8380367012980849
+  }
+]

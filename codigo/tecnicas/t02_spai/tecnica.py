@@ -19,6 +19,7 @@ interfira nas demais tecnicas (risco R02).
 from __future__ import annotations
 
 import csv
+import os
 import shutil
 import subprocess
 import sys
@@ -160,6 +161,26 @@ class T02SPAI(BaseTechnique):
             # --model precisa ser explicito e absoluto: seu valor padrao,
             # "./weights/spai.pth", e resolvido a partir do diretorio do
             # repositorio oficial, onde o checkpoint deste projeto nao esta.
+            # DATA.NUM_WORKERS (23/09/2026): o padrao do SPAI e 24
+            # (`externo/spai/spai/config.py:61`), dimensionado para o servidor
+            # dos autores. Nesta maquina -- 15,7 GB, dos quais ~12 GB ja
+            # tomados -- os 24 processos estouram a memoria e a rodada morre
+            # com "DataLoader worker (pid(s) ...) exited unexpectedly", as
+            # vezes precedido de "arquivo de paginacao e muito pequeno".
+            #
+            # Observado em 21/09 na tela v2 e em 23/09 aqui, nas duas amostras
+            # de `fpr_raise1k_todas.py`. O `infer` nao expoe --data-workers (so
+            # o `train`), entao o caminho e --opt, que o `get_config` repassa ao
+            # `merge_from_list` do yacs.
+            #
+            # ⚠️ Nao use 0: DATA.PREFETCH_FACTOR e 2 e o PyTorch recusa prefetch
+            # sem multiprocessing; anular os dois esbarra na checagem de tipo do
+            # yacs, que nao troca int por None.
+            #
+            # ✅ Nao altera escore -- o numero de workers governa so o
+            # paralelismo de leitura. Conferido na tela v2: 0,885062 com 24 e
+            # com 2, identico ate a sexta casa.
+            workers = os.environ.get("TCC3_T02_WORKERS", "2").strip() or "2"
             command = [
                 self.python_executable, "-m", "spai", "infer",
                 "--input", str(input_csv),
@@ -167,6 +188,7 @@ class T02SPAI(BaseTechnique):
                 "--model", str(self.external.spai_checkpoint.resolve()),
                 "--batch-size", str(self.batch_size),
                 "--split", _SPLIT,
+                "--opt", "DATA.NUM_WORKERS", workers,
             ]
             limit = self._timeout_for(len(paths))
             try:

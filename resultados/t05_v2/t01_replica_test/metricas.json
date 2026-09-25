@@ -1,0 +1,68 @@
+{
+  "manifesto": "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\resultados\\t05_v2\\manifesto_replica.csv",
+  "split_avaliado": "test",
+  "n": 14788,
+  "auc": 0.81938692897105,
+  "acuracia": 0.5211658101163105,
+  "f1": 0.567730907758989,
+  "fpr": 0.029523809523809525,
+  "fnr": 0.600446812167039,
+  "tn": 3057,
+  "fp": 93,
+  "fn": 6988,
+  "tp": 4650,
+  "por_gerador": {
+    "real": {
+      "auc": NaN,
+      "acuracia": 0.9704761904761905
+    },
+    "adobe_firefly": {
+      "auc": NaN,
+      "acuracia": 0.36
+    },
+    "dalle2": {
+      "auc": NaN,
+      "acuracia": 0.57
+    },
+    "dalle3": {
+      "auc": NaN,
+      "acuracia": 0.09
+    },
+    "flux": {
+      "auc": NaN,
+      "acuracia": 0.537
+    },
+    "gigagan": {
+      "auc": NaN,
+      "acuracia": 0.528
+    },
+    "midjourney_v5": {
+      "auc": NaN,
+      "acuracia": 0.672
+    },
+    "midjourney_v6_1": {
+      "auc": NaN,
+      "acuracia": 0.49686520376175547
+    },
+    "stable_diffusion_1_3": {
+      "auc": NaN,
+      "acuracia": 0.33
+    },
+    "stable_diffusion_1_4": {
+      "auc": NaN,
+      "acuracia": 0.33
+    },
+    "stable_diffusion_2": {
+      "auc": NaN,
+      "acuracia": 0.308
+    },
+    "stable_diffusion_3": {
+      "auc": NaN,
+      "acuracia": 0.032
+    },
+    "stable_diffusion_xl": {
+      "auc": NaN,
+      "acuracia": 0.576
+    }
+  }
+}

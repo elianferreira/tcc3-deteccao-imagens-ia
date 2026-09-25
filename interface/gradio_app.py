@@ -429,7 +429,51 @@ def build_interface(service: DetectionService | None = None) -> gr.Blocks:
     return demo
 
 
+# ---------------------------------------------------------------------------
+# Desativada em 07/09/2026
+# ---------------------------------------------------------------------------
+#
+# A interface oficial do trabalho passou a ser a `tcc3-interface-v2`. Este
+# repositorio segue sendo a fonte das medicoes do Capitulo 4, dos pesos e do
+# corpus -- mas a **tela** daqui e material de consulta.
+#
+# O bloqueio existe por uma razao operacional concreta, e nao por burocracia:
+# as duas telas disputam a mesma placa de 6 GB. Foi com a v1 no ar que a T02
+# sobre 4,13 MPx consumiu 5.931 MiB e derrubou os servicos T04 do WSL2. Com a
+# v1 parada, a mesma imagem roda em 21 s sem teto nenhum -- que e a condicao
+# do artigo, e a que a v2 usa por padrao.
+#
+# Nada foi removido. Uma variavel reabre:
+#
+#     $env:TCC3_V1_TELA = "1"; python interface\gradio_app.py
+#
+# Antes de reabrir, pare a v2: `Get-NetTCPConnection -LocalPort 7860`.
+MOTIVO_DESATIVADA = (
+    "A tela do v1 foi desativada em 07/09/2026: a interface oficial e a "
+    "tcc3-interface-v2, que roda T01, T02 e T03 medidas com a politica de "
+    "resolucao por tecnica.\n\n"
+    "Este repositorio continua ativo como fonte de medicoes, pesos e corpus -- "
+    "so a tela saiu de servico.\n\n"
+    "As duas telas disputam a mesma GPU de 6 GB, e foi com esta no ar que a "
+    "T02 esgotou a memoria da placa.\n\n"
+    "Para reabrir mesmo assim (pare a v2 antes):\n"
+    "    $env:TCC3_V1_TELA = \"1\"\n"
+    "    python interface\gradio_app.py"
+)
+
+
+def tela_habilitada() -> bool:
+    """A tela do v1 so sobe com liberacao explicita. Ver MOTIVO_DESATIVADA."""
+    import os
+
+    return os.environ.get("TCC3_V1_TELA", "0").strip() not in {"", "0", "false", "False"}
+
+
 def main() -> None:
+    if not tela_habilitada():
+        print(MOTIVO_DESATIVADA)
+        raise SystemExit(2)
+
     # RNF03: nenhum arquivo intermediario e retido apos o encerramento; o
     # diretorio temporario da sessao e removido com o processo.
     with tempfile.TemporaryDirectory(prefix="tcc3_sessao_") as session_dir:

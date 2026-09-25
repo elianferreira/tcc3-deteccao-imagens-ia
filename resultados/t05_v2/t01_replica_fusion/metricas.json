@@ -1,0 +1,24 @@
+{
+  "manifesto": "C:\\Users\\ferre\\projects\\tcc3-deteccao-imagens-ia\\resultados\\t05_v2\\manifesto_replica.csv",
+  "split_avaliado": "val",
+  "n": 2350,
+  "auc": 0.9761711111111111,
+  "acuracia": 0.9459574468085107,
+  "f1": 0.9343669250645995,
+  "fpr": 0.022962962962962963,
+  "fnr": 0.096,
+  "tn": 1319,
+  "fp": 31,
+  "fn": 96,
+  "tp": 904,
+  "por_gerador": {
+    "real": {
+      "auc": NaN,
+      "acuracia": 0.977037037037037
+    },
+    "glide": {
+      "auc": NaN,
+      "acuracia": 0.904
+    }
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "sem_T03__disponibilidade": {
+    "fontes": [
+      "T01",
+      "T02",
+      "T04"
+    ],
+    "mascara": "disponibilidade",
+    "pesos": {
+      "T01": 3.1495,
+      "T02": 2.5603,
+      "T04": 0.3035
+    },
+    "metricas": {
+      "n_samples": 13072.0,
+      "accuracy": 0.6002,
+      "f1": 0.7139,
+      "auc": 0.847,
+      "tn": 1325.0,
+      "fp": 109.0,
+      "fn": 5117.0,
+      "tp": 6521.0,
+      "fpr": 0.076,
+      "fnr": 0.4397,
+      "precision": 0.9836,
+      "recall": 0.5603
+    },
+    "ic95": [
+      0.8374,
+      0.8558
+    ]
+  },
+  "sem_T03__confiabilidade": {
+    "fontes": [
+      "T01",
+      "T02",
+      "T04"
+    ],
+    "mascara": "confiabilidade",
+    "pesos": {
+      "T01": 3.1828,
+      "T02": 2.5677,
+      "T04": 0.2908
+    },
+    "metricas": {
+      "n_samples": 13072.0,
+      "accuracy": 0.5973,
+      "f1": 0.7111,
+      "auc": 0.8338,
+      "tn": 1330.0,
+      "fp": 104.0,
+      "fn": 5160.0,
+      "tp": 6478.0,
+      "fpr": 0.0725,
+      "fnr": 0.4434,
+      "precision": 0.9842,
+      "recall": 0.5566
+    },
+    "ic95": [
+      0.824,
+      0.8422
+    ]
+  },
+  "com_T03__disponibilidade": {
+    "fontes": [
+      "T01",
+      "T02",
+      "T03",
+      "T04"
+    ],
+    "mascara": "disponibilidade",
+    "pesos": {
+      "T01": 2.9895,
+      "T02": 2.4903,
+      "T03": 0.9626,
+      "T04": 0.2847
+    },
+    "metricas": {
+      "n_samples": 13072.0,
+      "accuracy": 0.5843,
+      "f1": 0.6986,
+      "auc": 0.8297,
+      "tn": 1341.0,
+      "fp": 93.0,
+      "fn": 5341.0,
+      "tp": 6297.0,
+      "fpr": 0.0649,
+      "fnr": 0.4589,
+      "precision": 0.9854,
+      "recall": 0.5411
+    },
+    "ic95": [
+      0.8194,
+      0.8389
+    ]
+  },
+  "com_T03__confiabilidade": {
+    "fontes": [
+      "T01",
+      "T02",
+      "T03",
+      "T04"
+    ],
+    "mascara": "confiabilidade",
+    "pesos": {
+      "T01": 3.0479,
+      "T02": 2.4926,
+      "T03": 0.879,
+      "T04": 0.2847
+    },
+    "metricas": {
+      "n_samples": 13072.0,
+      "accuracy": 0.5757,
+      "f1": 0.6904,
+      "auc": 0.829,
+      "tn": 1342.0,
+      "fp": 92.0,
+      "fn": 5454.0,
+      "tp": 6184.0,
+      "fpr": 0.0642,
+      "fnr": 0.4686,
+      "precision": 0.9853,
+      "recall": 0.5314
+    },
+    "ic95": [
+      0.819,
+      0.8378
+    ]
+  }
+}

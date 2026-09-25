@@ -70,3 +70,6 @@ Thumbs.db
 .vscode/chrome-debug-profile/
 .vscode/.ropeproject/
 .idea/
+
+# Caches de features: regeneraveis pelo proprio script, 227 MB (25/09)
+resultados/t03_diversidade/features/
